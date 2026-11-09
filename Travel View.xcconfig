@@ -1,0 +1,34 @@
+SDKROOT = auto
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx
+MACOSX_DEPLOYMENT_TARGET = 14.0
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+TARGETED_DEVICE_FAMILY = 1
+SUPPORTS_MACCATALYST = NO
+SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO
+PRODUCT_NAME = Travel View
+PRODUCT_BUNDLE_IDENTIFIER = local.travelview.prototype
+GENERATE_INFOPLIST_FILE = YES
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_STYLE[sdk=iphoneos*] = Automatic
+CODE_SIGN_IDENTITY = -
+CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Development
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*] = YES
+INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*] = YES
+INFOPLIST_KEY_UIRequiresFullScreen[sdk=iphone*] = YES
+ENABLE_USER_SCRIPT_SANDBOXING[sdk=iphone*] = NO
+CLANG_ENABLE_OBJC_ARC = YES
+ALWAYS_SEARCH_USER_PATHS = NO
+
+// macOS uses Xcode's Python. The iPhone build embeds the Python XCFramework.
+PYTHON_FRAMEWORKS = $(DEVELOPER_DIR)/Library/Frameworks
+HEADER_SEARCH_PATHS[sdk=macosx*] = $(inherited) "$(PYTHON_FRAMEWORKS)/Python3.framework/Headers"
+HEADER_SEARCH_PATHS[sdk=iphoneos*] = $(inherited) "$(PROJECT_DIR)/Vendor/Python.xcframework/ios-arm64/Python.framework/Headers"
+HEADER_SEARCH_PATHS[sdk=iphonesimulator*] = $(inherited) "$(PROJECT_DIR)/Vendor/Python.xcframework/ios-arm64_x86_64-simulator/Python.framework/Headers"
+FRAMEWORK_SEARCH_PATHS[sdk=macosx*] = $(inherited) "$(PYTHON_FRAMEWORKS)"
+LD_RUNPATH_SEARCH_PATHS[sdk=macosx*] = $(inherited) "$(PYTHON_FRAMEWORKS)"
+LD_RUNPATH_SEARCH_PATHS[sdk=iphone*] = $(inherited) @executable_path/Frameworks
+OTHER_LDFLAGS[sdk=macosx*] = $(inherited) -framework AppKit -framework WebKit -framework Python3
+OTHER_LDFLAGS[sdk=iphone*] = $(inherited) -framework UIKit -framework WebKit
+GCC_PREPROCESSOR_DEFINITIONS[sdk=macosx*] = $(inherited) TRAVEL_VIEW_PYTHON_HOME='"$(PYTHON_FRAMEWORKS)/Python3.framework/Versions/Current"'

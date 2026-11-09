@@ -1,0 +1,7 @@
+.DS_Store
+__pycache__/
+build/
+DerivedData/
+xcuserdata/
+/Vendor/Python.xcframework/
+/Vendor/.python-ios.*/

@@ -1,0 +1,155 @@
+/* Shared colors and sizing. The dark palette follows the system appearance. */
+:root {
+    color-scheme: light dark;
+    font: 16px -apple-system, BlinkMacSystemFont, sans-serif;
+    font: -apple-system-body;
+    --background: #e3eaf6;
+    --surface: #fff;
+    --ink: #202b3d;
+    --secondary: #59677c;
+    --accent: #315be0;
+    --on-accent: #fff;
+    --tint: #e0e8ff;
+    --edge: #a8b9d6;
+    --divider: #dce4f0;
+    --danger: #b42318;
+    --gutter: clamp(16px, 4vw, 28px);
+    background: var(--background);
+    color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #141e2b;
+        --surface: #243040;
+        --ink: #edf1f8;
+        --secondary: #adb9cd;
+        --accent: #8eaaff;
+        --on-accent: #17243c;
+        --tint: #293d61;
+        --edge: #46556b;
+        --divider: #3b485c;
+        --danger: #ffb4ab;
+    }
+}
+
+* { box-sizing: border-box; }
+body, h1, h2, h3, p, dl, dd { margin: 0; }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; color: inherit; }
+button:disabled { opacity: .55; cursor: default; }
+button:active:not(:disabled) { opacity: .75; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg { display: block; width: 1.35em; height: 1.35em; flex: none; }
+
+/* Navigation and buttons shared by all screens. */
+.navigation {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--background);
+}
+.navigation-content, main { max-width: 46rem; margin-inline: auto; padding-inline: var(--gutter); }
+.navigation-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+    align-items: center;
+    min-height: 52px;
+    gap: 4px;
+}
+.navigation-content > :last-child { justify-self: end; }
+.navigation h1 { font-size: 1rem; font-weight: 650; text-align: center; }
+.toolbar-icon, .toolbar-link, .tinted, .primary {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 12px;
+}
+.toolbar-icon, .toolbar-link { background: transparent; color: var(--accent); }
+.toolbar-icon { width: 44px; border-radius: 50%; background: var(--tint); }
+.toolbar-link { padding: 0 4px; text-align: left; }
+.toolbar-link svg { width: .9em; }
+.toolbar-link span { overflow: hidden; text-overflow: ellipsis; }
+main { padding-top: 10px; padding-bottom: 28px; }
+.large-title, .detail-heading h2 { font-size: 2rem; line-height: 1.12; font-weight: 700; letter-spacing: -.022em; }
+.large-title { margin-bottom: 14px; }
+
+.panel { background: var(--surface); border: 1px solid var(--divider); border-radius: 16px; }
+
+/* Upcoming uses the empty state or a list of trip cards. */
+.empty {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: clamp(36px, 9vw, 66px) 12px 24px;
+    text-align: center;
+}
+.empty h2 { font-size: 1.35rem; font-weight: 650; }
+.empty p { color: var(--secondary); font-size: .92rem; }
+.thumbnail, .empty-icon { display: grid; place-items: center; background: var(--tint); color: var(--accent); }
+.empty-icon { width: 72px; height: 72px; border-radius: 50%; font-size: 1.8rem; }
+.tinted { padding: 8px 16px; background: var(--tint); color: var(--accent); font-weight: 600; }
+
+.trip-count { margin: 0 4px 8px; color: var(--secondary); font-size: .8rem; }
+.trip-list { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.trip-row {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 14px;
+    align-items: start;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    text-align: left;
+}
+.trip-row.in-progress { border-color: var(--accent); }
+.thumbnail { width: 44px; height: 44px; border-radius: 10px; }
+.trip-copy { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.trip-copy span { color: var(--secondary); font-size: .82rem; }
+.trip-copy .status { color: var(--accent); font-weight: 650; }
+.chevron { color: var(--secondary); margin-top: 3px; }
+.chevron svg { width: 14px; height: 14px; }
+
+.trip-form, .overview { display: grid; gap: 16px; }
+
+/* New trip form groups and date controls. */
+.section-label { margin: 0 14px 6px; color: var(--secondary); font-size: .83rem; font-weight: 550; }
+.field-group { padding-inline: 14px; }
+.field { display: grid; gap: 5px; padding-block: 10px; font-size: .86rem; font-weight: 550; }
+.field + .field { border-top: 1px solid var(--divider); }
+.optional { color: var(--secondary); font-weight: 400; }
+input, textarea {
+    display: block;
+    width: 100%;
+    min-height: 34px;
+    padding: 5px 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font-size: max(16px, 1rem);
+    font-weight: 400;
+}
+input::placeholder, textarea::placeholder { color: var(--secondary); opacity: 1; }
+.date-field {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 400;
+}
+input[type="date"] { width: auto; min-height: 36px; background: var(--tint); padding-inline: 8px; }
+textarea { resize: vertical; }
+.primary { background: var(--accent); color: var(--on-accent); padding: 9px 14px; font-weight: 650; }
+.error { color: var(--danger); overflow-wrap: anywhere; }
+
+/* Trip overview heading, dates, and notes. */
+.detail-heading { padding: 7px 0 2px; overflow-wrap: anywhere; }
+.detail-heading p { margin-top: 7px; color: var(--secondary); }
+.details { padding: 16px; border-radius: 20px; overflow-wrap: anywhere; }
+.details h3 { font-size: 1rem; font-weight: 650; margin-bottom: 10px; }
+dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+dt { color: var(--secondary); font-size: .82rem; }
+dd { margin-top: 4px; }
+.notes { white-space: pre-wrap; line-height: 1.45; }
