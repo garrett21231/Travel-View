@@ -1,4 +1,8 @@
-# Travel View for Mac and iPhone
+# Travel View
+
+The new native Swift version is in [`Native`](Native/README.md). Open [`Travel View Native.xcodeproj`](Native/Travel%20View%20Native.xcodeproj) for its SwiftUI interface and SQLite storage.
+
+## Python version
 
 Open `Travel View.xcodeproj` and select the **Travel View** scheme. Choose **My Mac** or an iPhone simulator as the run destination, then press **⌘R**. The deployment targets are macOS 14 and iOS 17.
 

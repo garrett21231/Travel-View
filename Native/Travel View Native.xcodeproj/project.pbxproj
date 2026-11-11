@@ -1,0 +1,276 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B10000000000000000000001 /* TravelViewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* TravelViewApp.swift */; };
+		B10000000000000000000002 /* TripStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* TripStore.swift */; };
+		B10000000000000000000003 /* TripBackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000013 /* TripBackupDocument.swift */; };
+		B10000000000000000000004 /* TripLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000014 /* TripLibraryView.swift */; };
+		B10000000000000000000005 /* TripEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000015 /* TripEditor.swift */; };
+		B10000000000000000000006 /* TripOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000016 /* TripOverview.swift */; };
+		B10000000000000000000007 /* TravelTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000017 /* TravelTheme.swift */; };
+		B10000000000000000000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000018 /* Assets.xcassets */; };
+		B10000000000000000000009 /* TravelCore in Frameworks */ = {isa = PBXBuildFile; productRef = B1000000000000000000003A /* TravelCore */; };
+		B10000000000000000000050 /* ItineraryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000040; };
+		B10000000000000000000051 /* FlightLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000041; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000011 /* TravelViewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelViewApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* TripStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStore.swift; sourceTree = "<group>"; };
+		B10000000000000000000013 /* TripBackupDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripBackupDocument.swift; sourceTree = "<group>"; };
+		B10000000000000000000014 /* TripLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLibraryView.swift; sourceTree = "<group>"; };
+		B10000000000000000000015 /* TripEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEditor.swift; sourceTree = "<group>"; };
+		B10000000000000000000016 /* TripOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripOverview.swift; sourceTree = "<group>"; };
+		B10000000000000000000017 /* TravelTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTheme.swift; sourceTree = "<group>"; };
+		B10000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B10000000000000000000019 /* TravelView.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TravelView.entitlements; sourceTree = "<group>"; };
+		B1000000000000000000001A /* Travel View Native.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Travel View Native.xcconfig"; sourceTree = "<group>"; };
+		B1000000000000000000001B /* Travel View Native.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Travel View Native.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000040 /* ItineraryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryEditor.swift; sourceTree = "<group>"; };
+		B10000000000000000000041 /* FlightLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightLookupView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B10000000000000000000033 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000009 /* TravelCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B10000000000000000000020 = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000021 /* TravelView */,
+				B1000000000000000000001A /* Travel View Native.xcconfig */,
+				B10000000000000000000025 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B10000000000000000000021 /* TravelView */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000022 /* App */,
+				B10000000000000000000023 /* Views */,
+				B10000000000000000000024 /* Design */,
+				B10000000000000000000018 /* Assets.xcassets */,
+				B10000000000000000000019 /* TravelView.entitlements */,
+			);
+			path = TravelView;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000022 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000011 /* TravelViewApp.swift */,
+				B10000000000000000000012 /* TripStore.swift */,
+				B10000000000000000000013 /* TripBackupDocument.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000023 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000014 /* TripLibraryView.swift */,
+				B10000000000000000000015 /* TripEditor.swift */,
+				B10000000000000000000016 /* TripOverview.swift */,
+				B10000000000000000000041 /* FlightLookupView.swift */,
+				B10000000000000000000040 /* ItineraryEditor.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000024 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000017 /* TravelTheme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000025 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000000000000000001B /* Travel View Native.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B10000000000000000000031 /* Travel View Native */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000000000000000000036 /* Build configuration list for PBXNativeTarget "Travel View Native" */;
+			buildPhases = (
+				B10000000000000000000032 /* Sources */,
+				B10000000000000000000033 /* Frameworks */,
+				B10000000000000000000034 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Travel View Native";
+			packageProductDependencies = (
+				B1000000000000000000003A /* TravelCore */,
+			);
+			productName = "Travel View Native";
+			productReference = B1000000000000000000001B /* Travel View Native.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B10000000000000000000030 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2710;
+			};
+			buildConfigurationList = B10000000000000000000035 /* Build configuration list for PBXProject "Travel View Native" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B10000000000000000000020;
+			packageReferences = (
+				B10000000000000000000039 /* XCLocalSwiftPackageReference "TravelCore" */,
+			);
+			productRefGroup = B10000000000000000000025 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B10000000000000000000031 /* Travel View Native */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B10000000000000000000034 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000008 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B10000000000000000000032 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000001 /* TravelViewApp.swift in Sources */,
+				B10000000000000000000002 /* TripStore.swift in Sources */,
+				B10000000000000000000003 /* TripBackupDocument.swift in Sources */,
+				B10000000000000000000004 /* TripLibraryView.swift in Sources */,
+				B10000000000000000000005 /* TripEditor.swift in Sources */,
+				B10000000000000000000006 /* TripOverview.swift in Sources */,
+				B10000000000000000000051 /* FlightLookupView.swift in Sources */,
+				B10000000000000000000050 /* ItineraryEditor.swift in Sources */,
+				B10000000000000000000007 /* TravelTheme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B10000000000000000000037 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B1000000000000000000001A /* Travel View Native.xcconfig */;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B10000000000000000000038 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B1000000000000000000001A /* Travel View Native.xcconfig */;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		B1000000000000000000003B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JYA5R46FZG;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = Debug;
+		};
+		B1000000000000000000003C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JYA5R46FZG;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B10000000000000000000035 /* Build configuration list for PBXProject "Travel View Native" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000037 /* Debug */,
+				B10000000000000000000038 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000000000000000000036 /* Build configuration list for PBXNativeTarget "Travel View Native" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1000000000000000000003B /* Debug */,
+				B1000000000000000000003C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B10000000000000000000039 /* XCLocalSwiftPackageReference "TravelCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = TravelCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B1000000000000000000003A /* TravelCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000000000000000000039 /* XCLocalSwiftPackageReference "TravelCore" */;
+			productName = TravelCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B10000000000000000000030 /* Project object */;
+}

@@ -3,5 +3,12 @@ __pycache__/
 build/
 DerivedData/
 xcuserdata/
+.build/
+.swiftpm/
+node_modules/
+.env
+.env.*
+!.env.example
+*.sqlite*
 /Vendor/Python.xcframework/
 /Vendor/.python-ios.*/
