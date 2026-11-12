@@ -62,11 +62,15 @@ public struct ItineraryInput: Equatable, Sendable {
     public var location: String
     public var notes: String
     public var flight: FlightDetails?
+    public var startTime: LocalClock?
+    public var endTime: LocalClock?
 
     public init(kind: ItineraryKind, title: String, start: TravelDay? = nil, end: TravelDay? = nil,
-                location: String = "", notes: String = "", flight: FlightDetails? = nil) {
+                location: String = "", notes: String = "", flight: FlightDetails? = nil,
+                startTime: LocalClock? = nil, endTime: LocalClock? = nil) {
         self.kind = kind; self.title = title; self.start = start; self.end = end
         self.location = location; self.notes = notes; self.flight = flight
+        self.startTime = startTime; self.endTime = endTime
     }
 
     public func validated() throws -> Self {
@@ -83,11 +87,19 @@ public struct ItineraryInput: Equatable, Sendable {
             value.flight = try flight.validated()
             value.start = flight.departureLocal?.day ?? start
             value.end = flight.arrivalLocal?.day ?? end
+            value.startTime = nil
+            value.endTime = nil
             // A date-line crossing can arrive on the previous local day.
         } else {
             value.flight = nil
             guard end == nil || (start != nil && end! >= start!) else {
                 throw TripError("Choose an end date on or after the start date.")
+            }
+            guard startTime == nil || start != nil, endTime == nil || end != nil else {
+                throw TripError("Choose a date before adding its time.")
+            }
+            if let start, start == end, let startTime, let endTime, endTime < startTime {
+                throw TripError("Choose an end time on or after the start time, or move the end to a later day.")
             }
         }
         return value
@@ -106,15 +118,19 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
     public let location: String
     public let notes: String
     public let flight: FlightDetails?
+    public let startTime: LocalClock?
+    public let endTime: LocalClock?
     public let createdAt: Date
 
     init(id: String, tripID: String, input: ItineraryInput, createdAt: Date) {
         self.id = id; self.tripID = tripID; kind = input.kind; title = input.title
         start = input.start; end = input.end; location = input.location; notes = input.notes
         flight = input.flight; self.createdAt = createdAt
+        startTime = input.startTime; endTime = input.endTime
     }
     public var input: ItineraryInput {
-        ItineraryInput(kind: kind, title: title, start: start, end: end, location: location, notes: notes, flight: flight)
+        ItineraryInput(kind: kind, title: title, start: start, end: end, location: location, notes: notes,
+                       flight: flight, startTime: startTime, endTime: endTime)
     }
     public var dateText: String {
         guard let start else { return "Date to be decided" }
@@ -128,8 +144,8 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
                 guard let right = $1.start else { return true }
                 return left < right
             }
-            let leftClock = $0.flight?.departureLocal?.clock ?? ""
-            let rightClock = $1.flight?.departureLocal?.clock ?? ""
+            let leftClock = $0.flight?.departureLocal?.clock ?? $0.startTime?.rawValue ?? "99:99"
+            let rightClock = $1.flight?.departureLocal?.clock ?? $1.startTime?.rawValue ?? "99:99"
             return (leftClock, $0.createdAt, $0.id) < (rightClock, $1.createdAt, $1.id)
         }
     }

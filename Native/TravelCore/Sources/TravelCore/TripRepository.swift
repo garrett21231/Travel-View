@@ -46,6 +46,12 @@ public final class TripRepository: Sendable {
                 CREATE INDEX itineraryItems_tripID ON itineraryItems(tripID);
                 """)
         }
+        migrator.registerMigration("addItineraryTimes") { db in
+            try db.alter(table: "itineraryItems") { table in
+                table.add(column: "startTime", .text)
+                table.add(column: "endTime", .text)
+            }
+        }
         try migrator.migrate(database)
     }
 

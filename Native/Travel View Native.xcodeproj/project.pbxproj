@@ -18,6 +18,7 @@
 		B10000000000000000000009 /* TravelCore in Frameworks */ = {isa = PBXBuildFile; productRef = B1000000000000000000003A /* TravelCore */; };
 		B10000000000000000000050 /* ItineraryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000040; };
 		B10000000000000000000051 /* FlightLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000041; };
+		B10000000000000000000052 /* ItineraryDayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000042; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		B1000000000000000000001B /* Travel View Native.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Travel View Native.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000040 /* ItineraryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryEditor.swift; sourceTree = "<group>"; };
 		B10000000000000000000041 /* FlightLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightLookupView.swift; sourceTree = "<group>"; };
+		B10000000000000000000042 /* ItineraryDayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryDayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +87,7 @@
 				B10000000000000000000014 /* TripLibraryView.swift */,
 				B10000000000000000000015 /* TripEditor.swift */,
 				B10000000000000000000016 /* TripOverview.swift */,
+				B10000000000000000000042 /* ItineraryDayView.swift */,
 				B10000000000000000000041 /* FlightLookupView.swift */,
 				B10000000000000000000040 /* ItineraryEditor.swift */,
 			);
@@ -182,6 +185,7 @@
 				B10000000000000000000004 /* TripLibraryView.swift in Sources */,
 				B10000000000000000000005 /* TripEditor.swift in Sources */,
 				B10000000000000000000006 /* TripOverview.swift in Sources */,
+				B10000000000000000000052 /* ItineraryDayView.swift in Sources */,
 				B10000000000000000000051 /* FlightLookupView.swift in Sources */,
 				B10000000000000000000050 /* ItineraryEditor.swift in Sources */,
 				B10000000000000000000007 /* TravelTheme.swift in Sources */,

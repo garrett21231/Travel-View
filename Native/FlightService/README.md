@@ -4,7 +4,7 @@ This small TypeScript service keeps the AeroDataBox key off the iPhone and Mac. 
 
 ## Run locally
 
-Install Node.js 24.11 or later. There are no runtime package dependencies. From this directory, run:
+Use Node.js LTS, version 24.11 or later. The service is also verified with Node.js 26.13.1. There are no runtime package dependencies. From this directory, run:
 
 ```sh
 npm ci

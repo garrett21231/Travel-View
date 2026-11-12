@@ -8,6 +8,8 @@ struct TripOverview: View {
     @State private var editor: ItemSelection?
     @State private var removing: ItineraryItem?
     @State private var error: String?
+    @State private var today = TravelDay()
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private struct ItemSelection: Identifiable {
@@ -17,40 +19,44 @@ struct TripOverview: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(trip.name).font(.largeTitle.bold())
-                        .accessibilityAddTraits(.isHeader)
-                        .accessibilityIdentifier("overview-trip-name")
-                    Text(trip.destinationText).font(.title3).foregroundStyle(TravelTheme.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Trip details").font(.headline).accessibilityAddTraits(.isHeader)
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
-                        detail("Departure", value: trip.start?.formatted ?? "To be decided", symbol: "calendar")
-                        detail("Return", value: trip.end?.formatted ?? "To be decided", symbol: "calendar.badge.checkmark")
-                        detail("Travelers", value: "\(trip.plannedTravelers) planned", symbol: "person.2")
-                        detail("Budget", value: trip.budgetCents.map(Money.formatted) ?? "Not set", symbol: "creditcard")
+        let days = ItineraryTimeline.days(for: store.items(for: trip.id))
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(trip.name).font(.largeTitle.bold())
+                            .accessibilityAddTraits(.isHeader)
+                            .accessibilityIdentifier("overview-trip-name")
+                        Text(trip.destinationText).font(.title3).foregroundStyle(TravelTheme.secondary)
                     }
-                }
-                .tripPanel()
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                itineraryPanel
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Trip details").font(.headline).accessibilityAddTraits(.isHeader)
+                        LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
+                            detail("Departure", value: trip.start?.formatted ?? "To be decided", symbol: "calendar")
+                            detail("Return", value: trip.end?.formatted ?? "To be decided", symbol: "calendar.badge.checkmark")
+                            detail("Travelers", value: "\(trip.plannedTravelers) planned", symbol: "person.2")
+                            detail("Budget", value: trip.budgetCents.map(Money.formatted) ?? "Not set", symbol: "creditcard")
+                        }
+                    }
+                    .tripPanel()
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Notes").font(.headline).accessibilityAddTraits(.isHeader)
-                    Text(trip.notes.isEmpty ? "No notes added." : trip.notes)
-                        .foregroundStyle(trip.notes.isEmpty ? TravelTheme.secondary : TravelTheme.ink)
-                        .textSelection(.enabled)
+                    if !days.isEmpty { comingUp(days: days, proxy: proxy) }
+                    itineraryPanel(days: days)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Notes").font(.headline).accessibilityAddTraits(.isHeader)
+                        Text(trip.notes.isEmpty ? "No notes added." : trip.notes)
+                            .foregroundStyle(trip.notes.isEmpty ? TravelTheme.secondary : TravelTheme.ink)
+                            .textSelection(.enabled)
+                    }
+                    .tripPanel()
                 }
-                .tripPanel()
+                .padding(20)
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
             }
-            .padding(20)
-            .frame(maxWidth: 760)
-            .frame(maxWidth: .infinity)
         }
         .background(TravelTheme.background)
         .navigationTitle("Overview")
@@ -78,55 +84,65 @@ struct TripOverview: View {
         .alert("Travel View", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { today = TravelDay() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in today = TravelDay() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in today = TravelDay() }
     }
 
-    private var itineraryPanel: some View {
+    private func itineraryPanel(days: [ItineraryDay]) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             ViewThatFits(in: .horizontal) {
                 HStack { itineraryHeading; Spacer(); addMenu }
                 VStack(alignment: .leading, spacing: 12) { itineraryHeading; addMenu }
             }
-            let items = store.items(for: trip.id)
-            if items.isEmpty {
+            if days.isEmpty {
                 Text("Bring your plans together with flights, places to stay, and things to do.")
                     .foregroundStyle(TravelTheme.secondary)
+                    .tripPanel()
+            } else {
+                Text("Times are local to each location. Plans with a time appear first within each day.")
+                    .font(.caption).foregroundStyle(TravelTheme.secondary)
             }
-            ForEach(items) { item in
-                Divider()
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: item.kind.symbol).foregroundStyle(TravelTheme.accent)
-                        .frame(width: 24).padding(.top, 3).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(item.title).font(.headline)
-                        Text(item.dateText).font(.subheadline).foregroundStyle(TravelTheme.secondary)
-                        if let flight = item.flight {
-                            Text("\(flight.number) · \(flight.departureAirport.isEmpty ? "TBD" : flight.departureAirport) → \(flight.arrivalAirport.isEmpty ? "TBD" : flight.arrivalAirport)")
-                            if let departure = flight.departureLocal { Text("Departs \(departure.formatted)") }
-                            if let arrival = flight.arrivalLocal { Text("Arrives \(arrival.formatted)") }
-                            if flight.departureLocal != nil || flight.arrivalLocal != nil {
-                                Text("Airport local times").font(.caption).foregroundStyle(TravelTheme.secondary)
-                            }
-                            if !flight.airline.isEmpty { Text(flight.airline) }
-                            if !flight.bookingReference.isEmpty { Text("Booking reference: \(flight.bookingReference)") }
-                            if let snapshot = flight.lastLookup {
-                                Text("Schedule from \(snapshot.provider), looked up \(snapshot.fetchedAt.formatted(date: .abbreviated, time: .shortened)). Review with your airline before travel.")
-                                    .font(.caption).foregroundStyle(TravelTheme.secondary)
-                            }
-                        }
-                        if !item.location.isEmpty { Text(item.location) }
-                        if !item.notes.isEmpty { Text(item.notes).foregroundStyle(TravelTheme.secondary) }
+            ForEach(days) { day in
+                ItineraryDayView(group: day, today: today, canEdit: store.canChangeTrips,
+                                 onEdit: { editor = ItemSelection(item: $0, kind: $0.kind) },
+                                 onRemove: { removing = $0 })
+            }
+        }
+    }
+
+    private func comingUp(days: [ItineraryDay], proxy: ScrollViewProxy) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Coming up").font(.headline).accessibilityAddTraits(.isHeader)
+            if let next = ItineraryTimeline.upcomingDay(in: days, on: today), let date = next.day {
+                Text(date == today ? "Today’s schedule" : "Next planned day").font(.caption).foregroundStyle(TravelTheme.secondary)
+                Text(date.formatted).font(.title3.weight(.semibold))
+                ForEach(next.events.prefix(2)) { event in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(event.item.title).font(.subheadline.weight(.medium))
+                        Text("\(event.title) · \(event.timeText)").font(.caption).foregroundStyle(TravelTheme.secondary)
                     }
-                    .font(.subheadline)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    Menu {
-                        Button("Edit", systemImage: "pencil") { editor = ItemSelection(item: item, kind: item.kind) }
-                        Button("Remove", systemImage: "trash", role: .destructive) { removing = item }
-                    } label: { Label("Actions for \(item.title)", systemImage: "ellipsis.circle").labelStyle(.iconOnly) }
-                        .disabled(!store.canChangeTrips)
                 }
+                if next.events.count > 2 {
+                    Text("+\(next.events.count - 2) more on this day").font(.caption).foregroundStyle(TravelTheme.secondary)
+                }
+                Button("View day", systemImage: "calendar") {
+                    withAnimation { proxy.scrollTo(next.id, anchor: .top) }
+                }.buttonStyle(.bordered)
+            } else if days.contains(where: { $0.day == nil }) {
+                Text("Your open plans are ready for dates.").foregroundStyle(TravelTheme.secondary)
+                Button("View undated plans", systemImage: "calendar.badge.questionmark") {
+                    withAnimation { proxy.scrollTo("undated", anchor: .top) }
+                }.buttonStyle(.bordered)
+            } else {
+                Text("No more dated plans ahead. Your earlier plans are in the itinerary below.")
+                    .foregroundStyle(TravelTheme.secondary)
             }
-        }.tripPanel()
+        }
+        .tripPanel()
+        .accessibilityIdentifier("coming-up")
     }
 
     private var itineraryHeading: some View {
@@ -157,14 +173,5 @@ struct TripOverview: View {
             }
         }
         .accessibilityElement(children: .combine)
-    }
-}
-
-private extension View {
-    func tripPanel() -> some View {
-        padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(TravelTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-            .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(TravelTheme.edge.opacity(0.4), lineWidth: 0.7) }
     }
 }

@@ -10,7 +10,7 @@ public struct TripArchive: Codable, Sendable {
     let items: [ItineraryItem]
 
     public static func encode(_ trips: [Trip], items: [ItineraryItem] = []) throws -> Data {
-        let archive = Self(format: "travel-view-native", version: 2, exportedAt: .now, trips: trips, items: items)
+        let archive = Self(format: "travel-view-native", version: 3, exportedAt: .now, trips: trips, items: items)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -44,7 +44,7 @@ public struct TripArchive: Codable, Sendable {
         let archive: Self
         do { archive = try decoder.decode(Self.self, from: data) }
         catch { throw TripError("This file could not be read as a native Travel View backup.") }
-        guard archive.format == "travel-view-native", (1...2).contains(archive.version) else {
+        guard archive.format == "travel-view-native", (1...3).contains(archive.version) else {
             throw TripError("This backup format needs a different version of Travel View.")
         }
         guard archive.trips.count <= 5000 else { throw TripError("Import up to 5,000 trips at a time.") }

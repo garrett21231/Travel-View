@@ -22,6 +22,11 @@ struct ItineraryEditor: View {
         var notes: String
         var hasDates: Bool
         var hasArrivalDate: Bool
+        var hasEndDate: Bool
+        var hasStartTime: Bool
+        var hasEndTime: Bool
+        var startClock: Date
+        var endClock: Date
         var start: Date
         var end: Date
         var flight: FlightDetails
@@ -37,6 +42,11 @@ struct ItineraryEditor: View {
             notes = item?.notes ?? ""
             hasDates = item?.start != nil
             hasArrivalDate = item == nil || item?.end != nil
+            hasEndDate = item.map { $0.end != nil } ?? (kind == .lodging)
+            hasStartTime = item?.startTime != nil
+            hasEndTime = item?.endTime != nil
+            startClock = (item?.startTime ?? LocalClock(rawValue: "09:00")!).pickerDate
+            endClock = (item?.endTime ?? LocalClock(rawValue: "10:00")!).pickerDate
             start = (item?.start ?? trip.start ?? TravelDay()).date()
             end = (item?.end ?? item?.start ?? trip.start ?? TravelDay()).date()
             flight = item?.flight ?? FlightDetails()
@@ -66,8 +76,10 @@ struct ItineraryEditor: View {
             details.departureLocal = hasDates && hasDepartureTime ? LocalMoment(day: TravelDay(start), clockFrom: departureTime) : nil
             details.arrivalLocal = hasDates && hasArrivalDate && hasArrivalTime ? LocalMoment(day: TravelDay(end), clockFrom: arrivalTime) : nil
             return ItineraryInput(kind: kind, title: title, start: hasDates ? TravelDay(start) : nil,
-                                  end: hasDates && (kind != .flight || hasArrivalDate) ? TravelDay(end) : nil, location: location, notes: notes,
-                                  flight: kind == .flight ? details : nil)
+                                  end: hasDates && (kind == .flight ? hasArrivalDate : hasEndDate) ? TravelDay(end) : nil,
+                                  location: location, notes: notes, flight: kind == .flight ? details : nil,
+                                  startTime: kind != .flight && hasDates && hasStartTime ? LocalClock(pickerDate: startClock) : nil,
+                                  endTime: kind != .flight && hasDates && hasEndDate && hasEndTime ? LocalClock(pickerDate: endClock) : nil)
         }
     }
 
@@ -100,10 +112,25 @@ struct ItineraryEditor: View {
                     if draft.hasDates {
                         DatePicker(draft.kind == .lodging ? "Check-in" : draft.kind == .flight ? "Departure day" : "Start",
                                    selection: $draft.start, displayedComponents: .date)
+                        if draft.kind != .flight {
+                            Toggle(draft.kind == .lodging ? "Add check-in time" : "Add start time", isOn: $draft.hasStartTime)
+                                .accessibilityIdentifier("add-start-time")
+                            if draft.hasStartTime {
+                                clockPicker(draft.kind == .lodging ? "Check-in time" : "Start time", selection: $draft.startClock)
+                            }
+                            Toggle(draft.kind == .lodging ? "Add check-out date" : "Add end date", isOn: $draft.hasEndDate)
+                                .accessibilityIdentifier("add-end-date")
+                        }
                         if draft.kind == .flight { Toggle("Add arrival date", isOn: $draft.hasArrivalDate) }
-                        if draft.kind != .flight || draft.hasArrivalDate {
+                        if draft.kind == .flight ? draft.hasArrivalDate : draft.hasEndDate {
                             DatePicker(draft.kind == .lodging ? "Check-out" : draft.kind == .flight ? "Arrival day" : "End",
                                        selection: $draft.end, displayedComponents: .date)
+                            if draft.kind != .flight {
+                                Toggle(draft.kind == .lodging ? "Add check-out time" : "Add end time", isOn: $draft.hasEndTime)
+                                if draft.hasEndTime {
+                                    clockPicker(draft.kind == .lodging ? "Check-out time" : "End time", selection: $draft.endClock)
+                                }
+                            }
                         }
                         if draft.kind == .flight {
                             Toggle("Add departure time", isOn: $draft.hasDepartureTime)
@@ -121,7 +148,7 @@ struct ItineraryEditor: View {
                         }
                     }
                 } header: { Text("Schedule") } footer: {
-                    Text(draft.kind == .flight ? "Use each airport’s local date and time. Arrival can be on a different day." : "Leave dates open until your plans are ready.")
+                    Text(draft.kind == .flight ? "Use each airport’s local date and time. Arrival can be on a different day." : "Use local dates and times at the location. You can leave dates or times open while planning.")
                 }
                 Section("Notes") {
                     TextField("Details to remember", text: $draft.notes, axis: .vertical)
@@ -161,6 +188,9 @@ struct ItineraryEditor: View {
                     Button("Done") { focused = false }
                 }
                 #endif
+            }
+            .onChange(of: draft.start) { _, start in
+                if draft.kind != .flight && draft.end < start { draft.end = start }
             }
         }
         .sheet(isPresented: $lookup) {
@@ -202,6 +232,12 @@ struct ItineraryEditor: View {
         } header: { Text("Flight") } footer: {
             Text("Look up a schedule or enter the details yourself. Review the details before saving.")
         }
+    }
+
+    private func clockPicker(_ title: String, selection: Binding<Date>) -> some View {
+        DatePicker(title, selection: selection, displayedComponents: .hourAndMinute)
+            .environment(\.timeZone, LocalMoment.pickerTimeZone)
+            .accessibilityValue(LocalClock(pickerDate: selection.wrappedValue).rawValue + " local time")
     }
 
     private func save() {

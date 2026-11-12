@@ -76,7 +76,7 @@ struct ItineraryTests {
         #expect(try JSONDecoder().decode(FlightDetails.self, from: data) == flight)
     }
 
-    @Test func v2BackupsIncludeItemsAndV1BackupsStillImport() async throws {
+    @Test func itineraryBackupsIncludeItemsAndV1BackupsStillImport() async throws {
         let directory = directory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let source = try TripRepository(databaseURL: directory.appendingPathComponent("source.sqlite"))
