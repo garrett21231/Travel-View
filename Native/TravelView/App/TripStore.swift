@@ -86,6 +86,17 @@ final class TripStore {
         catch { throw TripError("The itinerary item couldn’t be saved. Your draft is still here.") }
     }
 
+    func applyFlightUpdate(_ update: FlightUpdate, selection: Set<FlightUpdate.Field>) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let saved = try await repository.applyFlightUpdate(update, selection: selection)
+            if let index = itinerary.firstIndex(where: { $0.id == saved.id }) { itinerary[index] = saved }
+        } catch let error as TripError { throw error }
+        catch { throw TripError("The flight update couldn’t be saved. Your review is still here. Try saving again.") }
+    }
+
     func deleteItem(_ item: ItineraryItem) async throws {
         guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
         isWorking = true

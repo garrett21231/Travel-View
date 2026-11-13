@@ -35,6 +35,22 @@ extension TripRepository {
         }
     }
 
+    /// Recheck the exact reviewed record inside the write transaction to prevent stale-review overwrites.
+    public func applyFlightUpdate(_ update: FlightUpdate, selection: Set<FlightUpdate.Field>) async throws -> ItineraryItem {
+        let input = try update.applying(selection)
+        return try await database.write { db in
+            guard let current = try ItineraryItem.fetchOne(db, key: update.base.id) else {
+                throw TripError("This flight was removed. Close this review and return to the itinerary.")
+            }
+            guard current == update.base else {
+                throw TripError("This flight changed while you were reviewing it. Close this review and check it again to keep the newer edits.")
+            }
+            let saved = ItineraryItem(id: current.id, tripID: current.tripID, input: input, createdAt: current.createdAt)
+            try saved.save(db)
+            return saved
+        }
+    }
+
     public func deleteItem(id: String, tripID: String) async throws {
         try await database.write { db in
             guard let item = try ItineraryItem.fetchOne(db, key: id), item.tripID == tripID else {

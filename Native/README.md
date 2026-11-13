@@ -12,6 +12,7 @@ Open `Travel View Native.xcodeproj`, choose the **Travel View Native** scheme, s
 - **Day-by-day itinerary** groups plans by local calendar day. Flights show departure and arrival entries, stays show check-in and check-out, and activities can include optional start and end times. Undated plans have their own section at the end. Each entry's menu edits its underlying item; editing either end of a flight or stay updates the same saved record.
 - **Coming up** previews today's scheduled entries or the next dated day, with a button that scrolls to it. The summary uses calendar days, and includes all of today's entries. It does not estimate which event happens next across different time zones. Its Today label follows the device's day and updates when the app becomes active, midnight passes, or the device time zone changes.
 - **Flights** can be entered manually or selected by flight number and local departure date through the configurable flight service. Lookup results fill a reviewable draft. Flight clocks retain each airport's local time. The saved lookup is attributed and dated, with no automatic live-status refresh.
+- **Check flight updates** is available in each flight entry's menu. Choose a matching schedule, compare Saved and Latest details, then save only the changes you select. Details that differ from the previous matching lookup stay unchecked. For manually entered flights without a comparable lookup, all replacements require selection. Title, notes, location and booking reference are kept. Missing provider values never clear known details. You can also save the lookup alone.
 - The collection’s **Trip backups** menu exports a JSON snapshot or imports one. Import appends missing IDs and preserves the current details of existing IDs. An import can be retried safely.
 
 The app has the bundle identifier `local.travelview.native`. Its database is `Travel View Native/trips.sqlite` inside its Application Support directory. On Mac, the app sandbox supplies that directory inside the app’s container. Numbered SQLite migrations add itinerary storage and optional local times while preserving existing records. Version 3 JSON backups include the new activity/stay times. Imports still accept version 1 trip-only backups and version 2 itineraries. Limits are 10 MB, 5,000 trips and 25,000 itinerary records. Imports are atomic and keep existing records with matching IDs.
@@ -32,6 +33,7 @@ Flight lookup needs the companion [flight service](FlightService/README.md). Tha
 | `TravelView/Views/ItineraryDayView.swift` | Day headers, local-time entries, expandable details and item actions. |
 | `TravelView/Views/ItineraryEditor.swift` | A local item draft and review of selected flight schedules. |
 | `TravelView/Views/FlightLookupView.swift` | Search, loading, errors, empty results and explicit flight selection. |
+| `TravelView/Views/FlightUpdateView.swift` | Read-only schedule checking and an explicit field-by-field update review. |
 | `TravelView/Design/TravelTheme.swift` and `Assets.xcassets` | Shared colors with dark and increased-contrast appearances. |
 | `TravelCore/Sources/TravelCore/Trip.swift` | Trip data, validation, sorting, and exact budget parsing. |
 | `TravelCore/Sources/TravelCore/TravelDay.swift` | Calendar days and their database/JSON representation. |
@@ -43,13 +45,18 @@ Flight lookup needs the companion [flight service](FlightService/README.md). Tha
 | `TravelCore/Sources/TravelCore/LocalClock.swift` | Validated HH:mm local times for activities and stays. |
 | `TravelCore/Sources/TravelCore/ItineraryTimeline.swift` | Day grouping, departure/arrival and check-in/out projections, stable ordering and the next planned day. |
 | `TravelCore/Sources/TravelCore/FlightService.swift` | The provider-independent flight client and lookup snapshot types. |
+| `TravelCore/Sources/TravelCore/FlightUpdate.swift` | Comparison with the previous lookup, manual-edit protection and selection of safe field updates. |
 | `FlightService/src` | TypeScript gateway with the server-only provider credential. |
 
 To follow **Save trip**, start at `save()` in `TripEditor.swift`. The form creates a `TripInput`, the store asks the repository to validate and commit it, and the returned `Trip` updates the collection and Overview. The form keeps a stable trip ID for save retries.
 
+To follow **Check flight updates**, start at the flight entry menu in `ItineraryDayView.swift`. `FlightUpdateView` requests a schedule through the existing lookup screen, then `FlightUpdate` compares it with the saved plan and its previous lookup. The repository checks that the reviewed record is still current inside the save transaction. A review of an edited or deleted flight cannot overwrite newer changes or recreate a deleted record. No storage migration is needed because the dated lookup is already part of `FlightDetails`.
+
 ## Verification
 
-From the repository root, run `swift test --package-path Native/TravelCore`. The 21 tests cover calendar days, exact money, persistence and save retries, Upcoming filtering, database upgrades, trip-scoped itinerary writes, date-line crossings, old/new backup imports and rollback, reviewed flight details and their source snapshot, day grouping and ordering, local time validation, the Coming up day selection, and flight client responses. The service has its own type check and six tests.
+From the repository root, run `swift test --package-path Native/TravelCore`. The 29 tests cover calendar days, exact money, persistence and save retries, Upcoming filtering, database upgrades, trip-scoped itinerary writes, date-line crossings, old/new backup imports and rollback, reviewed flight details and their source snapshot, day grouping and ordering, local time validation, Coming up selection, flight client responses, selected schedule updates, missing provider data, manual-edit preservation, and rejection of stale reviews. The service has its own type check and six tests.
+
+On November 13, 2026, the Mac backup round trip was verified through the native file pickers in isolated QA apps. A fresh version 3 export restored a trip with five itinerary items into an empty app, including activity and hotel times. Reimporting the export added no duplicates. The earlier generated fixture was selectable during this check as well; the previously observed disabled Open button was not reproduced.
 
 For isolated interface testing, a Debug build accepts the `TRAVEL_VIEW_NATIVE_DATA_DIR` environment variable in its Run scheme. Choose a directory the app can access. On Mac, the sandbox permits a temporary directory inside the app's own container; an arbitrary folder under `/private/tmp` is outside that sandbox.
 

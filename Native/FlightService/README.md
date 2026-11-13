@@ -17,11 +17,13 @@ The service listens on `127.0.0.1:8787`. In Xcode, choose **Product → Scheme �
 
 To try the full flow without a key, run `npm run demo` and search for **TV100** on any departure date. Its fictional JFK–LHR flight is labeled **Sample data** throughout the app. The demo entry point never contacts AeroDataBox. Stop either service with Control-C before starting the other on the same port.
 
+To test schedule changes, first save a TV100 flight using the normal demo. Stop the demo, then run `DEMO_SCHEDULE_VARIANT=updated npm run demo`. The sample departure changes from 19:30 to 20:00 and arrival changes from 07:20 to 07:50 on the following local day. In the app, use **Check flight updates** from the saved flight's menu. Review the comparison and choose which fields to apply. Manually edited details stay unchecked when the previous lookup is comparable. The variant is entirely fictional and uses no provider credentials.
+
 ## Contract and behavior
 
 `GET /v1/flights?number=BA178&date=2027-03-04` returns `{ "version": 1, "flights": [...] }`. Each result has a flight number, airline, departure and arrival airport codes, optional airport-local timestamps and zone identifiers, provider attribution, status at lookup, and a UTC `fetchedAt` timestamp. An empty array means no matching schedule. Dates are validated before provider access. Repeated legs are removed and different legs remain separate choices.
 
-The adapter reads **scheduled** times. It preserves the local clock directly, including overnight and date-line crossings. It never substitutes estimated times or invents missing times. The app stores the reviewed flight plan and its last lookup separately. There is no automatic status refresh in this milestone.
+The adapter reads **scheduled** times. It preserves the local clock directly, including overnight and date-line crossings. It never substitutes estimated times or invents missing times. The app stores the reviewed flight plan and its last lookup separately. Manual checking uses this same endpoint and requires the user to review and save selected changes. There is no automatic status refresh in this milestone.
 
 Errors distinguish invalid input (400), throttling (429), provider unavailability (503), and unreadable provider responses (502). Provider credentials and raw error bodies never reach the client. Upstream calls time out after 15 seconds, reject redirects, and have a 1 MB response limit.
 

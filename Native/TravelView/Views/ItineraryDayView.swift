@@ -8,6 +8,7 @@ struct ItineraryDayView: View {
     let canEdit: Bool
     let onEdit: (ItineraryItem) -> Void
     let onRemove: (ItineraryItem) -> Void
+    let onCheckFlight: (ItineraryItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -28,7 +29,8 @@ struct ItineraryDayView: View {
             ForEach(group.events) { event in
                 Divider()
                 ItineraryEventRow(event: event, canEdit: canEdit,
-                                  onEdit: { onEdit(event.item) }, onRemove: { onRemove(event.item) })
+                                  onEdit: { onEdit(event.item) }, onRemove: { onRemove(event.item) },
+                                  onCheckFlight: { onCheckFlight(event.item) })
             }
         }
         .tripPanel()
@@ -42,6 +44,7 @@ private struct ItineraryEventRow: View {
     let canEdit: Bool
     let onEdit: () -> Void
     let onRemove: () -> Void
+    let onCheckFlight: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -50,6 +53,9 @@ private struct ItineraryEventRow: View {
                     .font(.caption.weight(.semibold)).foregroundStyle(TravelTheme.accent)
                 Spacer(minLength: 8)
                 Menu {
+                    if event.item.kind == .flight {
+                        Button("Check flight updates", systemImage: "arrow.clockwise", action: onCheckFlight)
+                    }
                     Button("Edit", systemImage: "pencil", action: onEdit)
                     Button("Remove", systemImage: "trash", role: .destructive, action: onRemove)
                 } label: {

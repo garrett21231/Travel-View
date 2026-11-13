@@ -7,6 +7,7 @@ struct TripOverview: View {
     let onEdit: () -> Void
     @State private var editor: ItemSelection?
     @State private var removing: ItineraryItem?
+    @State private var checkingFlight: ItineraryItem?
     @State private var error: String?
     @State private var today = TravelDay()
     @Environment(\.scenePhase) private var scenePhase
@@ -70,6 +71,9 @@ struct TripOverview: View {
         .sheet(item: $editor) { selection in
             ItineraryEditor(store: store, trip: trip, item: selection.item, kind: selection.kind)
         }
+        .sheet(item: $checkingFlight) { item in
+            FlightUpdateView(store: store, item: item)
+        }
         .confirmationDialog("Remove this itinerary item?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible) {
             Button("Remove item", role: .destructive) {
                 guard let item = removing else { return }
@@ -108,7 +112,11 @@ struct TripOverview: View {
             ForEach(days) { day in
                 ItineraryDayView(group: day, today: today, canEdit: store.canChangeTrips,
                                  onEdit: { editor = ItemSelection(item: $0, kind: $0.kind) },
-                                 onRemove: { removing = $0 })
+                                 onRemove: { removing = $0 }, onCheckFlight: { item in
+                                     if item.start == nil {
+                                         error = "Edit the flight and add its departure date before checking for updates."
+                                     } else { checkingFlight = item }
+                                 })
             }
         }
     }

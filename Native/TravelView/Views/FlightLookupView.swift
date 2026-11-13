@@ -3,6 +3,7 @@ import TravelCore
 
 struct FlightLookupView: View {
     let onChoose: (FlightSchedule, TravelDay) -> Void
+    private let reviewingUpdate: Bool
     @State private var number: String
     @State private var day: Date
     @State private var request: SearchRequest?
@@ -17,8 +18,9 @@ struct FlightLookupView: View {
         let query: FlightQuery
     }
 
-    init(number: String, day: TravelDay, onChoose: @escaping (FlightSchedule, TravelDay) -> Void) {
+    init(number: String, day: TravelDay, reviewingUpdate: Bool = false, onChoose: @escaping (FlightSchedule, TravelDay) -> Void) {
         self.onChoose = onChoose
+        self.reviewingUpdate = reviewingUpdate
         _number = State(initialValue: number)
         _day = State(initialValue: day.date())
     }
@@ -44,21 +46,23 @@ struct FlightLookupView: View {
                     } description: {
                         Text("You can still add a flight and its schedule manually.")
                     } actions: {
-                        Button("Enter flight manually") { dismiss() }.buttonStyle(.borderedProminent)
+                        Button(reviewingUpdate ? "Close" : "Enter flight manually") { dismiss() }.buttonStyle(.borderedProminent)
                     }
                 } else {
                     Form {
                         Section {
                             TextField("Flight number, e.g. BA178", text: $number)
+                                .disabled(reviewingUpdate)
                                 .accessibilityIdentifier("lookup-flight-number")
                                 #if os(iOS)
                                 .textInputAutocapitalization(.characters).autocorrectionDisabled()
                                 #endif
                             DatePicker("Departure date", selection: $day, displayedComponents: .date)
-                            Button("Find flights", systemImage: "magnifyingglass", action: search)
+                                .disabled(reviewingUpdate)
+                            Button(reviewingUpdate ? "Check schedule" : "Find flights", systemImage: "magnifyingglass", action: search)
                                 .disabled(searching || number.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         } header: { Text("Search by flight number") } footer: {
-                            Text("Use the departure airport’s local date. Schedule availability varies by airline and date.")
+                            Text(reviewingUpdate ? "Choose the matching route to review its latest schedule. Your saved flight changes only when you save the review." : "Use the departure airport’s local date. Schedule availability varies by airline and date.")
                         }
                         if searching { Section { ProgressView("Finding flights…") } }
                         if let error { Section { Text(error).foregroundStyle(.red) } }
@@ -75,10 +79,10 @@ struct FlightLookupView: View {
                                         Text("Arrives \(schedule.arrival.local?.formatted ?? "time unavailable")")
                                         Text("Airport local times · \(schedule.provider)")
                                             .font(.caption).foregroundStyle(TravelTheme.secondary)
-                                        Button("Use this flight") {
+                                        Button(reviewingUpdate ? "Review this schedule" : "Use this flight") {
                                             guard let request else { return }
                                             onChoose(schedule, request.query.departureDay)
-                                            dismiss()
+                                            if !reviewingUpdate { dismiss() }
                                         }.buttonStyle(.bordered)
                                     }.padding(.vertical, 6)
                                 }
@@ -90,7 +94,7 @@ struct FlightLookupView: View {
                     .onChange(of: day) { _, _ in reset() }
                 }
             }
-            .navigationTitle("Find a flight")
+            .navigationTitle(reviewingUpdate ? "Check flight schedule" : "Find a flight")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
