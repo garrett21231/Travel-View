@@ -6,9 +6,10 @@ extension TripRepository {
         public let trips: [Trip]
         public let items: [ItineraryItem]
         public let sharedTripImports: [String: String]
+        public let deletedTrips: [DeletedTrip]
     }
 
-    /// Read both collections from the same database snapshot.
+    /// Active plans, sharing receipts and recovery summaries come from the same database snapshot.
     public func loadSnapshot() async throws -> Snapshot {
         try await database.read { db in
             try Self.snapshot(in: db)
@@ -17,9 +18,12 @@ extension TripRepository {
 
     static func snapshot(in db: Database) throws -> Snapshot {
         let receipts = try Row.fetchAll(db, sql: "SELECT packageID, tripID FROM sharedTripImports")
+        let deleted = try Row.fetchAll(db, sql: "SELECT id, tripID, name, deletedAt, itemCount FROM deletedTrips ORDER BY deletedAt DESC, id")
         return Snapshot(trips: try Trip.order(Column("createdAt").desc, Column("id")).fetchAll(db),
                         items: try ItineraryItem.fetchAll(db),
-                        sharedTripImports: Dictionary(uniqueKeysWithValues: receipts.map { ($0["packageID"] as String, $0["tripID"] as String) }))
+                        sharedTripImports: Dictionary(uniqueKeysWithValues: receipts.map { ($0["packageID"] as String, $0["tripID"] as String) }),
+                        deletedTrips: deleted.map { DeletedTrip(id: $0["id"], tripID: $0["tripID"], name: $0["name"],
+                                                              deletedAt: $0["deletedAt"], itemCount: $0["itemCount"]) })
     }
 
     public func saveItem(_ input: ItineraryInput, id: String, tripID: String) async throws -> ItineraryItem {

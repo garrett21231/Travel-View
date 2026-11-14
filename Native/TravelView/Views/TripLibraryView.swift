@@ -8,6 +8,8 @@ struct TripLibraryView: View {
     @State private var selectedTripID: String?
     @State private var compactColumn = NavigationSplitViewColumn.sidebar
     @State private var editor: EditorSelection?
+    @State private var deletingTrip: Trip?
+    @State private var showingDeletedTrips = false
     @State private var today = TravelDay()
     @State private var importing = false
     @State private var exporting = false
@@ -80,8 +82,11 @@ struct TripLibraryView: View {
                             Button("Export trips", systemImage: "square.and.arrow.up", action: exportTrips)
                                 .disabled(store.trips.isEmpty)
                             Button("Import backup", systemImage: "square.and.arrow.down") { importKind = .backup; importing = true }
+                            Divider()
+                            Button("Recently deleted", systemImage: "trash") { showingDeletedTrips = true }
+                                .accessibilityIdentifier("show-deleted-trips")
                         } label: {
-                            Label("Trip files and backups", systemImage: "ellipsis.circle")
+                            Label("Trip collection actions", systemImage: "ellipsis.circle")
                         }
                         .disabled(!store.canChangeTrips)
                         Button("New trip", systemImage: "plus") { editor = EditorSelection(trip: nil) }
@@ -92,7 +97,9 @@ struct TripLibraryView: View {
             } detail: {
                 if let trip = selectedTrip {
                     NavigationStack {
-                        TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
+                        TripOverview(trip: trip, store: store,
+                                     onEdit: { editor = EditorSelection(trip: trip) },
+                                     onDelete: { deletingTrip = trip })
                             .navigationDestination(for: ItinerarySelection.self) { selection in
                                 ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
                             }
@@ -128,6 +135,30 @@ struct TripLibraryView: View {
                 compactColumn = .detail
             }
         }
+        .sheet(isPresented: $showingDeletedTrips) {
+            RecentlyDeletedView(store: store) { id in
+                collection = .all
+                selectedTripID = id
+                compactColumn = .detail
+                showingDeletedTrips = false
+            }
+        }
+        .confirmationDialog("Delete “\(deletingTrip?.name ?? "this trip")”?",
+                            isPresented: Binding(get: { deletingTrip != nil }, set: { if !$0 { deletingTrip = nil } }),
+                            titleVisibility: .visible) {
+            if let trip = deletingTrip {
+                Button("Delete trip", role: .destructive) {
+                    Task {
+                        do { try await store.deleteTrip(trip) }
+                        catch { notice = error.localizedDescription }
+                    }
+                }
+                .disabled(!store.canChangeTrips)
+            }
+            Button("Cancel", role: .cancel) { deletingTrip = nil }
+        } message: {
+            Text("Moves this trip and all its saved plans to Recently deleted on this device. You can restore them from the collection menu. Copies shared with others stay as they are.")
+        }
         .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json,
                       defaultFilename: "Travel View Backup") { result in
             if case .failure(let error) = result { notice = error.localizedDescription }
@@ -147,6 +178,12 @@ struct TripLibraryView: View {
         .onOpenURL { readSharedTrip(from: $0) }
         .onChange(of: collection) { _, _ in
             if !visibleTrips.contains(where: { $0.id == selectedTripID }) { selectedTripID = nil }
+        }
+        .onChange(of: store.trips.map(\.id)) { _, ids in
+            if let selectedTripID, !ids.contains(selectedTripID) {
+                self.selectedTripID = nil
+                compactColumn = .sidebar
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { today = TravelDay() }
@@ -178,6 +215,10 @@ struct TripLibraryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .accessibilityIdentifier("trip-\(trip.id)")
+                    .contextMenu { deleteAction(for: trip) }
+                    #if os(iOS)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteAction(for: trip).tint(.red) }
+                    #endif
                 }
             } header: {
                 Text("\(visibleTrips.count) \(visibleTrips.count == 1 ? "trip" : "trips")")
@@ -190,6 +231,14 @@ struct TripLibraryView: View {
         #else
         .listStyle(.sidebar)
         #endif
+    }
+
+    private func deleteAction(for trip: Trip) -> some View {
+        Button(role: .destructive) { deletingTrip = trip } label: {
+            Label("Delete trip", systemImage: "trash")
+        }
+        .disabled(!store.canChangeTrips)
+        .accessibilityIdentifier("delete-trip-\(trip.id)")
     }
 
     private var emptyState: some View {

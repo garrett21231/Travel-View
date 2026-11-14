@@ -5,6 +5,7 @@ struct TripOverview: View {
     let trip: Trip
     let store: TripStore
     let onEdit: () -> Void
+    let onDelete: () -> Void
     @State private var editor: ItemSelection?
     @State private var removing: ItineraryItem?
     @State private var checkingFlight: ItineraryItem?
@@ -71,7 +72,16 @@ struct TripOverview: View {
             Button("Share trip", systemImage: "square.and.arrow.up") { sharing = true }
                 .accessibilityIdentifier("preview-trip-share")
             Button("Edit trip", systemImage: "pencil", action: onEdit)
+                .disabled(!store.canChangeTrips)
                 .accessibilityIdentifier("edit-trip")
+            Menu {
+                Button(role: .destructive, action: onDelete) { Label("Delete trip", systemImage: "trash") }
+                    .accessibilityIdentifier("delete-current-trip")
+            } label: {
+                Label("Trip actions", systemImage: "ellipsis.circle")
+            }
+            .disabled(!store.canChangeTrips)
+            .accessibilityIdentifier("trip-actions")
         }
         .sheet(item: $editor) { selection in
             ItineraryEditor(store: store, trip: trip, item: selection.item, kind: selection.kind)

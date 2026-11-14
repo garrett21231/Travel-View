@@ -13,6 +13,7 @@ final class TripStore {
     private(set) var loadError: String?
     private var repository: TripRepository?
     private(set) var sharedTripImports: [String: String] = [:]
+    private(set) var deletedTrips: [DeletedTrip] = []
 
     var canChangeTrips: Bool { repository != nil && !isLoading && !isWorking && loadError == nil }
 
@@ -38,9 +39,7 @@ final class TripStore {
                 }.value
             }
             let snapshot = try await repository!.loadSnapshot()
-            trips = snapshot.trips
-            itinerary = snapshot.items
-            sharedTripImports = snapshot.sharedTripImports
+            apply(snapshot)
             loadError = nil
         } catch {
             loadError = "Your saved trips couldn’t be opened. Try again or check that storage is available on this device."
@@ -50,12 +49,12 @@ final class TripStore {
         }
     }
 
-    func save(_ input: TripInput, id: String) async throws -> Trip {
+    func save(_ input: TripInput, id: String, expectingExisting: Bool = false) async throws -> Trip {
         guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
         isWorking = true
         defer { isWorking = false }
         do {
-            let saved = try await repository.save(input, id: id)
+            let saved = try await repository.save(input, id: id, expectingExisting: expectingExisting)
             if let index = trips.firstIndex(where: { $0.id == saved.id }) {
                 trips[index] = saved
             } else {
@@ -135,12 +134,38 @@ final class TripStore {
         defer { isWorking = false }
         do {
             let result = try await repository.importSharedTrip(package)
-            trips = result.snapshot.trips
-            itinerary = result.snapshot.items
-            sharedTripImports = result.snapshot.sharedTripImports
+            apply(result.snapshot)
             return result.tripID
         } catch let error as TripError { throw error }
         catch { throw TripError("The shared trip couldn’t be imported. Your existing trips are unchanged. Try again.") }
+    }
+
+    func deleteTrip(_ trip: Trip) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do { apply(try await repository.deleteTrip(id: trip.id)) }
+        catch let error as TripError { throw error }
+        catch { throw TripError("The trip couldn’t be deleted. Your collection is unchanged. Try again.") }
+    }
+
+    func restoreDeletedTrip(_ deleted: DeletedTrip) async throws -> String {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let result = try await repository.restoreDeletedTrip(id: deleted.id)
+            apply(result.snapshot)
+            return result.tripID
+        } catch let error as TripError { throw error }
+        catch { throw TripError("The trip couldn’t be restored. It is still in Recently deleted. Try again.") }
+    }
+
+    private func apply(_ snapshot: TripRepository.Snapshot) {
+        trips = snapshot.trips
+        itinerary = snapshot.items
+        sharedTripImports = snapshot.sharedTripImports
+        deletedTrips = snapshot.deletedTrips
     }
 
     nonisolated private static func defaultDirectory() throws -> URL {

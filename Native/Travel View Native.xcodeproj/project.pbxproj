@@ -27,6 +27,7 @@
 		B10000000000000000000057 /* ItineraryShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000047; };
 		B10000000000000000000059 /* TripFileDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000049; };
 		B1000000000000000000005A /* SharedTripViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004A; };
+		B1000000000000000000005B /* RecentlyDeletedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004B; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 		B10000000000000000000047 /* ItineraryShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryShareView.swift; sourceTree = "<group>"; };
 		B10000000000000000000049 /* TripFileDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripFileDocument.swift; sourceTree = "<group>"; };
 		B1000000000000000000004A /* SharedTripViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTripViews.swift; sourceTree = "<group>"; };
+		B1000000000000000000004B /* RecentlyDeletedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyDeletedView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +111,7 @@
 				B10000000000000000000045 /* ItineraryBrowserView.swift */,
 				B10000000000000000000046 /* PlanningSummaryView.swift */,
 				B1000000000000000000004A /* SharedTripViews.swift */,
+				B1000000000000000000004B /* RecentlyDeletedView.swift */,
 				B10000000000000000000047 /* ItineraryShareView.swift */,
 				B10000000000000000000044 /* ItineraryDetailView.swift */,
 				B10000000000000000000043 /* FlightUpdateView.swift */,
@@ -216,6 +219,7 @@
 				B10000000000000000000057 /* ItineraryShareView.swift in Sources */,
 				B10000000000000000000059 /* TripFileDocument.swift in Sources */,
 				B1000000000000000000005A /* SharedTripViews.swift in Sources */,
+				B1000000000000000000005B /* RecentlyDeletedView.swift in Sources */,
 				B10000000000000000000054 /* ItineraryDetailView.swift in Sources */,
 				B10000000000000000000053 /* FlightUpdateView.swift in Sources */,
 				B10000000000000000000051 /* FlightLookupView.swift in Sources */,

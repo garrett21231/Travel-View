@@ -161,7 +161,7 @@ struct TripEditor: View {
         Task {
             do {
                 let input = try draft.input()
-                let saved = try await store.save(input, id: tripID)
+                let saved = try await store.save(input, id: tripID, expectingExisting: isEditing)
                 onSaved(saved)
                 dismiss()
             } catch { saveError = error.localizedDescription }

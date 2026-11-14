@@ -67,6 +67,18 @@ public final class TripRepository: Sendable {
                 );
                 """)
         }
+        migrator.registerMigration("createDeletedTrips") { db in
+            try db.execute(sql: """
+                CREATE TABLE deletedTrips (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    tripID TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    deletedAt DATETIME NOT NULL,
+                    itemCount INTEGER NOT NULL,
+                    contents BLOB NOT NULL
+                );
+                """)
+        }
         try migrator.migrate(database)
     }
 
@@ -77,13 +89,16 @@ public final class TripRepository: Sendable {
     }
 
     /// A stable ID makes retrying a save update the same trip.
-    public func save(_ input: TripInput, id: String) async throws -> Trip {
+    public func save(_ input: TripInput, id: String, expectingExisting: Bool = false) async throws -> Trip {
         let input = try input.validated()
         guard let identifier = UUID(uuidString: id) else { throw TripError("The trip identifier is invalid.") }
         let id = identifier.uuidString
         let now = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970.rounded(.down))
         return try await database.write { db in
             let previous = try Trip.fetchOne(db, key: id)
+            guard !expectingExisting || previous != nil else {
+                throw TripError("This trip was deleted. Close this editor and restore the trip from Recently deleted before editing it again.")
+            }
             let trip = Trip(id: id, input: input, createdAt: previous?.createdAt ?? now)
             try trip.save(db)
             return trip
