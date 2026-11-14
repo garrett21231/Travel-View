@@ -9,6 +9,7 @@ struct ItineraryShareView: View {
     @State private var exporting = false
     @State private var document = ItineraryTextDocument(text: "")
     @State private var error: String?
+    @State private var preparingTripFile = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -18,6 +19,7 @@ struct ItineraryShareView: View {
                     let text = ItineraryText.make(trip: trip, items: store.items(for: tripID), options: options)
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
+                            tripFilePanel
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("Choose what to include").font(.headline).accessibilityAddTraits(.isHeader)
                                 Toggle("Include notes", isOn: $options.includeNotes)
@@ -65,9 +67,20 @@ struct ItineraryShareView: View {
         .alert("Couldn’t save itinerary", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+        .sheet(isPresented: $preparingTripFile) { ShareTripFileView(store: store, tripID: tripID) }
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 680, minHeight: 600, idealHeight: 760)
         #endif
+    }
+
+    private var tripFilePanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("For someone with Travel View").font(.headline)
+            Text("Send a complete trip file they can import and view in the app.")
+                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+            Button("Prepare trip file", systemImage: "suitcase.rolling") { preparingTripFile = true }
+                .buttonStyle(.bordered).accessibilityIdentifier("prepare-trip-file")
+        }.tripPanel()
     }
 
     @ViewBuilder private func actions(text: String) -> some View {

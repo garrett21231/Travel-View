@@ -59,6 +59,14 @@ public final class TripRepository: Sendable {
                 ALTER TABLE itineraryItems ADD COLUMN reservationReference TEXT NOT NULL DEFAULT '';
                 """)
         }
+        migrator.registerMigration("createSharedTripImports") { db in
+            try db.execute(sql: """
+                CREATE TABLE sharedTripImports (
+                    packageID TEXT PRIMARY KEY NOT NULL,
+                    tripID TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE
+                );
+                """)
+        }
         try migrator.migrate(database)
     }
 

@@ -47,17 +47,22 @@ public struct TripArchive: Codable, Sendable {
         guard archive.format == "travel-view-native", (1...4).contains(archive.version) else {
             throw TripError("This backup format needs a different version of Travel View.")
         }
-        guard archive.trips.count <= 5000 else { throw TripError("Import up to 5,000 trips at a time.") }
-        let trips = try archive.trips.map { trip in
+        return try validated(trips: archive.trips, items: archive.items)
+    }
+
+    /// Backups and single-trip files use the same field and relationship checks.
+    static func validated(trips incomingTrips: [Trip], items incomingItems: [ItineraryItem]) throws -> Contents {
+        guard incomingTrips.count <= 5000 else { throw TripError("Import up to 5,000 trips at a time.") }
+        let trips = try incomingTrips.map { trip in
             guard let identifier = UUID(uuidString: trip.id), trip.createdAt.timeIntervalSince1970.isFinite else {
                 throw TripError("The backup contains an invalid trip identifier or creation date.")
             }
             return Trip(id: identifier.uuidString, input: try trip.input.validated(), createdAt: trip.createdAt)
         }
         guard Set(trips.map(\.id)).count == trips.count else { throw TripError("The backup repeats a trip identifier.") }
-        guard archive.items.count <= 25_000 else { throw TripError("Import up to 25,000 itinerary items at a time.") }
+        guard incomingItems.count <= 25_000 else { throw TripError("Import up to 25,000 itinerary items at a time.") }
         let tripIDs = Set(trips.map(\.id))
-        let items = try archive.items.map { item in
+        let items = try incomingItems.map { item in
             guard let id = UUID(uuidString: item.id), let tripID = UUID(uuidString: item.tripID),
                   tripIDs.contains(tripID.uuidString), item.createdAt.timeIntervalSince1970.isFinite else {
                 throw TripError("The backup contains an itinerary item without a valid trip.")

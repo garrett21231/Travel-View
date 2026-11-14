@@ -5,14 +5,21 @@ extension TripRepository {
     public struct Snapshot: Sendable {
         public let trips: [Trip]
         public let items: [ItineraryItem]
+        public let sharedTripImports: [String: String]
     }
 
     /// Read both collections from the same database snapshot.
     public func loadSnapshot() async throws -> Snapshot {
         try await database.read { db in
-            Snapshot(trips: try Trip.order(Column("createdAt").desc, Column("id")).fetchAll(db),
-                     items: try ItineraryItem.fetchAll(db))
+            try Self.snapshot(in: db)
         }
+    }
+
+    static func snapshot(in db: Database) throws -> Snapshot {
+        let receipts = try Row.fetchAll(db, sql: "SELECT packageID, tripID FROM sharedTripImports")
+        return Snapshot(trips: try Trip.order(Column("createdAt").desc, Column("id")).fetchAll(db),
+                        items: try ItineraryItem.fetchAll(db),
+                        sharedTripImports: Dictionary(uniqueKeysWithValues: receipts.map { ($0["packageID"] as String, $0["tripID"] as String) }))
     }
 
     public func saveItem(_ input: ItineraryInput, id: String, tripID: String) async throws -> ItineraryItem {

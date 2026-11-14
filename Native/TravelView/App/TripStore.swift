@@ -12,6 +12,7 @@ final class TripStore {
     private(set) var isWorking = false
     private(set) var loadError: String?
     private var repository: TripRepository?
+    private(set) var sharedTripImports: [String: String] = [:]
 
     var canChangeTrips: Bool { repository != nil && !isLoading && !isWorking && loadError == nil }
 
@@ -39,6 +40,7 @@ final class TripStore {
             let snapshot = try await repository!.loadSnapshot()
             trips = snapshot.trips
             itinerary = snapshot.items
+            sharedTripImports = snapshot.sharedTripImports
             loadError = nil
         } catch {
             loadError = "Your saved trips couldn’t be opened. Try again or check that storage is available on this device."
@@ -125,6 +127,20 @@ final class TripStore {
             #endif
             throw TripError("The backup couldn’t be imported. Try again when storage is available.")
         }
+    }
+
+    func importSharedTrip(_ package: SharedTripPackage) async throws -> String {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let result = try await repository.importSharedTrip(package)
+            trips = result.snapshot.trips
+            itinerary = result.snapshot.items
+            sharedTripImports = result.snapshot.sharedTripImports
+            return result.tripID
+        } catch let error as TripError { throw error }
+        catch { throw TripError("The shared trip couldn’t be imported. Your existing trips are unchanged. Try again.") }
     }
 
     nonisolated private static func defaultDirectory() throws -> URL {

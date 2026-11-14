@@ -13,12 +13,19 @@ struct TripLibraryView: View {
     @State private var exporting = false
     @State private var exportDocument = TripBackupDocument(data: Data())
     @State private var notice: String?
+    @State private var importKind = ImportKind.backup
+    @State private var pendingPackage: SharedTripPackage?
+    @State private var reviewingPackage: SharedTripPackage?
+    @State private var readingSharedTrip = false
+    @State private var readTask: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
 
     private enum Collection: String, CaseIterable, Identifiable {
         case upcoming = "Upcoming", all = "All trips"
         var id: Self { self }
     }
+
+    private enum ImportKind { case backup, sharedTrip }
 
     private struct EditorSelection: Identifiable {
         let id = UUID()
@@ -34,70 +41,84 @@ struct TripLibraryView: View {
     private var selectedTrip: Trip? { store.trips.first { $0.id == selectedTripID } }
 
     var body: some View {
-        NavigationSplitView(preferredCompactColumn: $compactColumn) {
-            VStack(spacing: 0) {
-                Picker("Trip collection", selection: $collection) {
-                    ForEach(Collection.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
+        VStack(spacing: 0) {
+            NavigationSplitView(preferredCompactColumn: $compactColumn) {
+                VStack(spacing: 0) {
+                    Picker("Trip collection", selection: $collection) {
+                        ForEach(Collection.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
 
-                if store.isLoading {
-                    ProgressView("Loading your trips…").frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = store.loadError {
-                    ContentUnavailableView {
-                        Label("Couldn’t open trips", systemImage: "exclamationmark.triangle")
-                    } description: {
-                        Text(error)
-                    } actions: {
-                        Button("Try again") { Task { await store.load() } }
+                    if store.isLoading {
+                        ProgressView("Loading your trips…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let error = store.loadError {
+                        ContentUnavailableView {
+                            Label("Couldn’t open trips", systemImage: "exclamationmark.triangle")
+                        } description: {
+                            Text(error)
+                        } actions: {
+                            Button("Try again") { Task { await store.load() } }
+                        }
+                    } else if visibleTrips.isEmpty {
+                        emptyState
+                    } else {
+                        tripList
                     }
-                } else if visibleTrips.isEmpty {
-                    emptyState
-                } else {
-                    tripList
                 }
-            }
-            .background(TravelTheme.background)
-            .navigationTitle(collection == .upcoming ? "Upcoming trips" : "All trips")
-            .navigationSplitViewColumnWidth(min: 300, ideal: 350, max: 440)
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Menu {
-                        Button("Export trips", systemImage: "square.and.arrow.up", action: exportTrips)
-                            .disabled(store.trips.isEmpty)
-                        Button("Import backup", systemImage: "square.and.arrow.down") { importing = true }
-                    } label: {
-                        Label("Trip backups", systemImage: "ellipsis.circle")
-                    }
-                    .disabled(!store.canChangeTrips)
-                    Button("New trip", systemImage: "plus") { editor = EditorSelection(trip: nil) }
+                .background(TravelTheme.background)
+                .navigationTitle(collection == .upcoming ? "Upcoming trips" : "All trips")
+                .navigationSplitViewColumnWidth(min: 300, ideal: 350, max: 440)
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        Menu {
+                            Button("Import shared trip", systemImage: "suitcase.rolling") { importKind = .sharedTrip; importing = true }
+                            Divider()
+                            Button("Export trips", systemImage: "square.and.arrow.up", action: exportTrips)
+                                .disabled(store.trips.isEmpty)
+                            Button("Import backup", systemImage: "square.and.arrow.down") { importKind = .backup; importing = true }
+                        } label: {
+                            Label("Trip files and backups", systemImage: "ellipsis.circle")
+                        }
                         .disabled(!store.canChangeTrips)
-                        .accessibilityIdentifier("new-trip")
+                        Button("New trip", systemImage: "plus") { editor = EditorSelection(trip: nil) }
+                            .disabled(!store.canChangeTrips)
+                            .accessibilityIdentifier("new-trip")
+                    }
+                }
+            } detail: {
+                if let trip = selectedTrip {
+                    NavigationStack {
+                        TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
+                            .navigationDestination(for: ItinerarySelection.self) { selection in
+                                ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
+                            }
+                            .navigationDestination(for: ItineraryBrowserSelection.self) { selection in
+                                ItineraryBrowserView(store: store, selection: selection)
+                            }
+                    }
+                    .id(trip.id)
+                } else {
+                    ContentUnavailableView("Your next adventure", systemImage: "suitcase.rolling",
+                                           description: Text("Choose a trip or start planning a new one."))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(TravelTheme.background)
                 }
             }
-        } detail: {
-            if let trip = selectedTrip {
-                NavigationStack {
-                    TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
-                        .navigationDestination(for: ItinerarySelection.self) { selection in
-                            ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
-                        }
-                        .navigationDestination(for: ItineraryBrowserSelection.self) { selection in
-                            ItineraryBrowserView(store: store, selection: selection)
-                        }
-                }
-                .id(trip.id)
-            } else {
-                ContentUnavailableView("Your next adventure", systemImage: "suitcase.rolling",
-                                       description: Text("Choose a trip or start planning a new one."))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(TravelTheme.background)
+            .navigationSplitViewStyle(.balanced)
+            incomingTripBanner
+        }
+        .sheet(item: $reviewingPackage) { package in
+            SharedTripImportView(store: store, package: package) { id in
+                collection = .all
+                selectedTripID = id
+                compactColumn = .detail
+                if pendingPackage?.id == package.id { pendingPackage = nil }
+                reviewingPackage = nil
             }
         }
-        .navigationSplitViewStyle(.balanced)
         .sheet(item: $editor) { selection in
             TripEditor(store: store, trip: selection.trip) { saved in
                 if let end = saved.end, end < today { collection = .all }
@@ -109,9 +130,11 @@ struct TripLibraryView: View {
                       defaultFilename: "Travel View Backup") { result in
             if case .failure(let error) = result { notice = error.localizedDescription }
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+        .fileImporter(isPresented: $importing, allowedContentTypes: importKind == .backup ? [.json] : [.travelViewTrip]) { result in
             switch result {
-            case .success(let url): importTrips(from: url)
+            case .success(let url):
+                if importKind == .backup { importTrips(from: url) }
+                else { readSharedTrip(from: url) }
             case .failure(let error): notice = error.localizedDescription
             }
         }
@@ -119,6 +142,7 @@ struct TripLibraryView: View {
             Button("OK") { notice = nil }
         } message: { Text(notice ?? "") }
         .task { await store.load() }
+        .onOpenURL { readSharedTrip(from: $0) }
         .onChange(of: collection) { _, _ in
             if !visibleTrips.contains(where: { $0.id == selectedTripID }) { selectedTripID = nil }
         }
@@ -126,6 +150,20 @@ struct TripLibraryView: View {
             if phase == .active { today = TravelDay() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in today = TravelDay() }
+    }
+
+    /// Outside the split view so it remains visible in either compact column on iPhone.
+    @ViewBuilder private var incomingTripBanner: some View {
+        if let package = pendingPackage {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Trip file ready: \(package.trip.name)").font(.subheadline.weight(.semibold))
+                HStack {
+                    Button("Review shared trip") { reviewingPackage = package }
+                        .buttonStyle(.borderedProminent).accessibilityIdentifier("review-shared-trip")
+                    Button("Dismiss") { pendingPackage = nil }
+                }
+            }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(TravelTheme.surface)
+        } else if readingSharedTrip { ProgressView("Reading shared trip…").padding(14) }
     }
 
     private var tripList: some View {
@@ -170,6 +208,27 @@ struct TripLibraryView: View {
             exportDocument = TripBackupDocument(data: try TripArchive.encode(store.trips, items: store.itinerary))
             exporting = true
         } catch { notice = error.localizedDescription }
+    }
+
+    /// A pending-file banner lets an open editor keep its draft until the user is ready to review.
+    private func readSharedTrip(from url: URL) {
+        readTask?.cancel()
+        readingSharedTrip = true
+        readTask = Task {
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let package = try await Task.detached(priority: .userInitiated) {
+                    try SharedTripPackage.decode(TripFileReader.read(url))
+                }.value
+                guard !Task.isCancelled else { return }
+                pendingPackage = package
+            } catch {
+                guard !Task.isCancelled else { return }
+                notice = (error as? TripError)?.message ?? "The trip file couldn’t be opened. Download it to this device and try again."
+            }
+            readingSharedTrip = false
+        }
     }
 
     private func importTrips(from url: URL) {
