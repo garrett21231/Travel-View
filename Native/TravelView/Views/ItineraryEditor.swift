@@ -38,22 +38,22 @@ struct ItineraryEditor: View {
         var departureTime: Date
         var arrivalTime: Date
 
-        init(trip: Trip, item: ItineraryItem?, kind: ItineraryKind) {
+        init(trip: Trip, item: ItineraryItem?, kind: ItineraryKind, initialDay: TravelDay?) {
             self.kind = item?.kind ?? kind
             title = item?.title ?? ""
             location = item?.location ?? ""
             notes = item?.notes ?? ""
             bookingState = item?.bookingState ?? .planned
             reference = item?.confirmationReference ?? ""
-            hasDates = item?.start != nil
+            hasDates = item?.start != nil || (item == nil && initialDay != nil)
             hasArrivalDate = item == nil || item?.end != nil
             hasEndDate = item.map { $0.end != nil } ?? (kind == .lodging || kind == .transport)
             hasStartTime = item?.startTime != nil
             hasEndTime = item?.endTime != nil
             startClock = (item?.startTime ?? LocalClock(rawValue: "09:00")!).pickerDate
             endClock = (item?.endTime ?? LocalClock(rawValue: "10:00")!).pickerDate
-            start = (item?.start ?? trip.start ?? TravelDay()).date()
-            end = (item?.end ?? item?.start ?? trip.start ?? TravelDay()).date()
+            start = (item?.start ?? initialDay ?? trip.start ?? TravelDay()).date()
+            end = (item?.end ?? item?.start ?? initialDay ?? trip.start ?? TravelDay()).date()
             flight = item?.flight ?? FlightDetails()
             transport = item?.transport ?? TransportDetails()
             hasDepartureTime = flight.departureLocal != nil
@@ -90,10 +90,10 @@ struct ItineraryEditor: View {
         }
     }
 
-    init(store: TripStore, trip: Trip, item: ItineraryItem? = nil, kind: ItineraryKind = .activity) {
+    init(store: TripStore, trip: Trip, item: ItineraryItem? = nil, kind: ItineraryKind = .activity, initialDay: TravelDay? = nil) {
         self.store = store; self.trip = trip; self.item = item
         _itemID = State(initialValue: item?.id ?? UUID().uuidString)
-        let draft = Draft(trip: trip, item: item, kind: kind)
+        let draft = Draft(trip: trip, item: item, kind: kind, initialDay: initialDay)
         initial = draft
         _draft = State(initialValue: draft)
     }

@@ -106,6 +106,9 @@ struct TripLibraryView: View {
                             .navigationDestination(for: ItineraryBrowserSelection.self) { selection in
                                 ItineraryBrowserView(store: store, selection: selection)
                             }
+                            .navigationDestination(for: ItineraryScheduleSelection.self) { selection in
+                                ItineraryScheduleView(store: store, selection: selection)
+                            }
                     }
                     .id(trip.id)
                 } else {

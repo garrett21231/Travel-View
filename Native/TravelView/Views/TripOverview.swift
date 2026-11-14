@@ -24,44 +24,42 @@ struct TripOverview: View {
     var body: some View {
         let items = store.items(for: trip.id)
         let days = ItineraryTimeline.days(for: items)
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(trip.name).font(.largeTitle.bold())
-                            .accessibilityAddTraits(.isHeader)
-                            .accessibilityIdentifier("overview-trip-name")
-                        Text(trip.destinationText).font(.title3).foregroundStyle(TravelTheme.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Trip details").font(.headline).accessibilityAddTraits(.isHeader)
-                        LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
-                            detail("Departure", value: trip.start?.formatted ?? "To be decided", symbol: "calendar")
-                            detail("Return", value: trip.end?.formatted ?? "To be decided", symbol: "calendar.badge.checkmark")
-                            detail("Travelers", value: "\(trip.plannedTravelers) planned", symbol: "person.2")
-                            detail("Budget", value: trip.budgetCents.map(Money.formatted) ?? "Not set", symbol: "creditcard")
-                        }
-                    }
-                    .tripPanel()
-
-                    PlanningSummaryView(tripID: trip.id, summary: ItinerarySummary(items: items))
-                    if !days.isEmpty { comingUp(days: days, proxy: proxy) }
-                    itineraryPanel(days: days)
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Notes").font(.headline).accessibilityAddTraits(.isHeader)
-                        Text(trip.notes.isEmpty ? "No notes added." : trip.notes)
-                            .foregroundStyle(trip.notes.isEmpty ? TravelTheme.secondary : TravelTheme.ink)
-                            .textSelection(.enabled)
-                    }
-                    .tripPanel()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(trip.name).font(.largeTitle.bold())
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("overview-trip-name")
+                    Text(trip.destinationText).font(.title3).foregroundStyle(TravelTheme.secondary)
                 }
-                .padding(20)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Trip details").font(.headline).accessibilityAddTraits(.isHeader)
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
+                        detail("Departure", value: trip.start?.formatted ?? "To be decided", symbol: "calendar")
+                        detail("Return", value: trip.end?.formatted ?? "To be decided", symbol: "calendar.badge.checkmark")
+                        detail("Travelers", value: "\(trip.plannedTravelers) planned", symbol: "person.2")
+                        detail("Budget", value: trip.budgetCents.map(Money.formatted) ?? "Not set", symbol: "creditcard")
+                    }
+                }
+                .tripPanel()
+
+                PlanningSummaryView(tripID: trip.id, summary: ItinerarySummary(items: items))
+                if !days.isEmpty { comingUp(days: days) }
+                itineraryPanel(days: days)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Notes").font(.headline).accessibilityAddTraits(.isHeader)
+                    Text(trip.notes.isEmpty ? "No notes added." : trip.notes)
+                        .foregroundStyle(trip.notes.isEmpty ? TravelTheme.secondary : TravelTheme.ink)
+                        .textSelection(.enabled)
+                }
+                .tripPanel()
             }
+            .padding(20)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .background(TravelTheme.background)
         .navigationTitle("Overview")
@@ -117,6 +115,9 @@ struct TripOverview: View {
                 HStack { itineraryHeading; Spacer(); addMenu }
                 VStack(alignment: .leading, spacing: 12) { itineraryHeading; addMenu }
             }
+            NavigationLink(value: ItineraryScheduleSelection(tripID: trip.id)) {
+                Label("View full itinerary", systemImage: "calendar")
+            }.buttonStyle(.bordered).accessibilityIdentifier("view-full-itinerary")
             if days.isEmpty {
                 Text("Bring your plans together with flights, transport, places to stay, and things to do.")
                     .foregroundStyle(TravelTheme.secondary)
@@ -137,7 +138,7 @@ struct TripOverview: View {
         }
     }
 
-    private func comingUp(days: [ItineraryDay], proxy: ScrollViewProxy) -> some View {
+    private func comingUp(days: [ItineraryDay]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Coming up").font(.headline).accessibilityAddTraits(.isHeader)
             if let next = ItineraryTimeline.upcomingDay(in: days, on: today), let date = next.day {
@@ -152,14 +153,14 @@ struct TripOverview: View {
                 if next.events.count > 2 {
                     Text("+\(next.events.count - 2) more on this day").font(.caption).foregroundStyle(TravelTheme.secondary)
                 }
-                Button("View day", systemImage: "calendar") {
-                    withAnimation { proxy.scrollTo(next.id, anchor: .top) }
-                }.buttonStyle(.bordered)
+                NavigationLink(value: ItineraryScheduleSelection(tripID: trip.id, dayID: next.id)) {
+                    Label("View day", systemImage: "calendar")
+                }.buttonStyle(.bordered).accessibilityIdentifier("view-coming-up-day")
             } else if days.contains(where: { $0.day == nil }) {
                 Text("Your open plans are ready for dates.").foregroundStyle(TravelTheme.secondary)
-                Button("View undated plans", systemImage: "calendar.badge.questionmark") {
-                    withAnimation { proxy.scrollTo("undated", anchor: .top) }
-                }.buttonStyle(.bordered)
+                NavigationLink(value: ItineraryScheduleSelection(tripID: trip.id, dayID: "undated")) {
+                    Label("View undated plans", systemImage: "calendar.badge.questionmark")
+                }.buttonStyle(.bordered).accessibilityIdentifier("view-undated-itinerary")
             } else {
                 Text("No more dated plans ahead. Your earlier plans are in the itinerary below.")
                     .foregroundStyle(TravelTheme.secondary)
