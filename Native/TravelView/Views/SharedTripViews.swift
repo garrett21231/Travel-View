@@ -8,6 +8,7 @@ struct ShareTripFileView: View {
     @State private var package: SharedTripPackage?
     @State private var document: TripFileDocument?
     @State private var exporting = false
+    @State private var sharingText = false
     @State private var error: String?
     @Environment(\.dismiss) private var dismiss
 
@@ -20,10 +21,20 @@ struct ShareTripFileView: View {
                             Text("A complete trip copy").font(.headline)
                             Text("This file includes all saved details, including notes, booking references, budget and flight lookup snapshots. The recipient can import it into Travel View and edit their own copy.")
                                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                            Text("Send it with AirDrop, Messages or Mail. You don’t need to save a file first, and no Travel View account is required.")
+                                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 12) { actions(document, title: package.trip.name) }
                                 VStack(alignment: .leading, spacing: 12) { actions(document, title: package.trip.name) }
                             }
+                        }.tripPanel()
+                        receivingHelp
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("For someone without Travel View").font(.headline)
+                            Text("Share a readable itinerary with optional notes and booking references.")
+                                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                            Button("Share readable itinerary", systemImage: "doc.plaintext") { sharingText = true }
+                                .buttonStyle(.bordered).accessibilityIdentifier("preview-itinerary-share")
                         }.tripPanel()
                         SharedTripPreview(package: package)
                     } else if let error {
@@ -35,7 +46,7 @@ struct ShareTripFileView: View {
                 .padding(20).frame(maxWidth: 760).frame(maxWidth: .infinity)
             }
             .background(TravelTheme.background)
-            .navigationTitle("Share trip file")
+            .navigationTitle("Share trip")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -51,16 +62,34 @@ struct ShareTripFileView: View {
         .alert("Travel View", isPresented: Binding(get: { error != nil && package != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+        .sheet(isPresented: $sharingText) { ItineraryShareView(store: store, tripID: tripID) }
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 680, minHeight: 600, idealHeight: 760)
         #endif
     }
 
     @ViewBuilder private func actions(_ document: TripFileDocument, title: String) -> some View {
-        ShareLink(item: document, preview: SharePreview(title)) { Label("Share trip file", systemImage: "square.and.arrow.up") }
+        ShareLink(item: document, preview: SharePreview(title)) { Label("Send trip", systemImage: "square.and.arrow.up") }
             .buttonStyle(.borderedProminent).accessibilityIdentifier("share-trip-file")
-        Button("Save trip file", systemImage: "doc.badge.arrow.up") { exporting = true }
+        Button("Save a copy", systemImage: "doc.badge.arrow.up") { exporting = true }
             .buttonStyle(.bordered).accessibilityIdentifier("save-trip-file")
+    }
+
+    private var receivingHelp: some View {
+        DisclosureGroup("Opening a received trip") {
+            VStack(alignment: .leading, spacing: 10) {
+                #if os(iOS)
+                Text("Open the attachment in Messages or Mail and choose Travel View from the available open or share options. If it’s already in Files, tap the trip file there.")
+                #else
+                Text("Open the received trip file from Messages, Mail or Finder. AirDrop may save it in Downloads; open it there to start the review. If another app opens it, choose Open With → Travel View in Finder.")
+                #endif
+                Text("In Travel View, choose Review shared trip, then Import trip. You don’t need to find it again with the app’s Import shared trip menu.")
+                Text("This is an independent copy. Later edits won’t update the other person’s trip.")
+            }
+            .font(.subheadline).foregroundStyle(TravelTheme.secondary).padding(.top, 10)
+        }
+        .accessibilityIdentifier("received-trip-help")
+        .tripPanel()
     }
 
     private func prepare() {
