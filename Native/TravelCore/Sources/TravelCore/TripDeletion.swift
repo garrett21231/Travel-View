@@ -8,6 +8,7 @@ public struct DeletedTrip: Identifiable, Equatable, Sendable {
     public let name: String
     public let deletedAt: Date
     public let itemCount: Int
+    public let checklistCount: Int
 }
 
 private struct DeletedTripContents: Codable {
@@ -15,6 +16,7 @@ private struct DeletedTripContents: Codable {
     let trip: Trip
     let items: [ItineraryItem]
     let sharedTripImports: [String: String]
+    let checklist: [ChecklistItem]?
 }
 
 extension TripRepository {
@@ -27,15 +29,17 @@ extension TripRepository {
                 throw TripError("This trip is no longer in your collection.")
             }
             let items = try ItineraryItem.filter(Column("tripID") == trip.id).fetchAll(db)
+            let checklist = try ChecklistItem.filter(Column("tripID") == trip.id).fetchAll(db)
             let rows = try Row.fetchAll(db, sql: "SELECT packageID, tripID FROM sharedTripImports WHERE tripID = ?", arguments: [trip.id])
             let receipts = Dictionary(uniqueKeysWithValues: rows.map { ($0["packageID"] as String, $0["tripID"] as String) })
-            let contents = DeletedTripContents(version: items.contains { $0.kind == .transport } ? 2 : 1,
-                                               trip: trip, items: items, sharedTripImports: receipts)
+            let version = !checklist.isEmpty ? 3 : items.contains { $0.kind == .transport } ? 2 : 1
+            let contents = DeletedTripContents(version: version, trip: trip, items: items, sharedTripImports: receipts,
+                                               checklist: checklist.isEmpty ? nil : checklist)
             // This private database payload has no external-file size limit, so large saved trips remain deletable.
             let data = try JSONEncoder().encode(contents)
             let now = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970.rounded(.down))
-            try db.execute(sql: "INSERT INTO deletedTrips (id, tripID, name, deletedAt, itemCount, contents) VALUES (?, ?, ?, ?, ?, ?)",
-                           arguments: [UUID().uuidString, trip.id, trip.name, now, items.count, data])
+            try db.execute(sql: "INSERT INTO deletedTrips (id, tripID, name, deletedAt, itemCount, contents, checklistCount) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           arguments: [UUID().uuidString, trip.id, trip.name, now, items.count, data, checklist.count])
             try trip.delete(db)
             return try Self.snapshot(in: db)
         }
@@ -69,10 +73,12 @@ extension TripRepository {
             let contents: DeletedTripContents
             do { contents = try JSONDecoder().decode(DeletedTripContents.self, from: row["contents"] as Data) }
             catch { throw TripError("The deleted trip couldn’t be read. It has been kept in Recently deleted.") }
-            guard (1...2).contains(contents.version), contents.trip.id == row["tripID"] as String else {
+            guard (1...3).contains(contents.version), contents.trip.id == row["tripID"] as String,
+                  contents.version < 3 || contents.checklist != nil else {
                 throw TripError("This deleted trip needs a different version of Travel View.")
             }
             guard contents.items.allSatisfy({ $0.tripID == contents.trip.id }),
+                  (contents.checklist ?? []).allSatisfy({ $0.tripID == contents.trip.id }),
                   contents.sharedTripImports.values.allSatisfy({ $0 == contents.trip.id }) else {
                 throw TripError("The deleted trip has inconsistent saved details. It has been kept in Recently deleted.")
             }
@@ -81,6 +87,7 @@ extension TripRepository {
             }
             try contents.trip.insert(db)
             for item in contents.items { try item.insert(db) }
+            for item in contents.checklist ?? [] { try item.insert(db) }
             for (packageID, tripID) in contents.sharedTripImports {
                 // A file may have been imported again after deletion. Keep that newer receipt's destination.
                 try db.execute(sql: "INSERT INTO sharedTripImports (packageID, tripID) VALUES (?, ?) ON CONFLICT(packageID) DO NOTHING",

@@ -8,6 +8,7 @@ import TravelCore
 final class TripStore {
     private(set) var trips: [Trip] = []
     private(set) var itinerary: [ItineraryItem] = []
+    private(set) var checklist: [ChecklistItem] = []
     private(set) var isLoading = false
     private(set) var isWorking = false
     private(set) var loadError: String?
@@ -75,6 +76,46 @@ final class TripStore {
         ItineraryItem.ordered(itinerary.filter { $0.tripID == tripID })
     }
 
+    func checklistItems(for tripID: String) -> [ChecklistItem] {
+        ChecklistItem.ordered(checklist.filter { $0.tripID == tripID })
+    }
+
+    func saveChecklistItem(_ input: ChecklistInput, id: String, tripID: String, expectingExisting: Bool) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let item = try await repository.saveChecklistItem(input, id: id, tripID: tripID, expectingExisting: expectingExisting)
+            publishChecklistItem(item)
+        } catch let error as TripError { throw error }
+        catch { throw TripError("The checklist item couldn’t be saved. Your draft is still here.") }
+    }
+
+    func setChecklistCompletion(_ item: ChecklistItem, completed: Bool) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do { publishChecklistItem(try await repository.setChecklistCompletion(id: item.id, tripID: item.tripID, completed: completed)) }
+        catch let error as TripError { throw error }
+        catch { throw TripError("The checklist couldn’t be updated. Try again.") }
+    }
+
+    func deleteChecklistItem(_ item: ChecklistItem) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await repository.deleteChecklistItem(id: item.id, tripID: item.tripID)
+            checklist.removeAll { $0.id == item.id }
+        } catch let error as TripError { throw error }
+        catch { throw TripError("The checklist item couldn’t be removed. Try again.") }
+    }
+
+    private func publishChecklistItem(_ item: ChecklistItem) {
+        if let index = checklist.firstIndex(where: { $0.id == item.id }) { checklist[index] = item }
+        else { checklist.append(item) }
+    }
+
     func saveItem(_ input: ItineraryInput, id: String, tripID: String) async throws {
         guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
         isWorking = true
@@ -117,6 +158,7 @@ final class TripStore {
             let result = try await repository.restore(data)
             trips = result.trips
             itinerary = result.items
+            checklist = result.checklist
             return result
         } catch let error as TripError {
             throw error
@@ -173,6 +215,7 @@ final class TripStore {
     private func apply(_ snapshot: TripRepository.Snapshot) {
         trips = snapshot.trips
         itinerary = snapshot.items
+        checklist = snapshot.checklist
         sharedTripImports = snapshot.sharedTripImports
         deletedTrips = snapshot.deletedTrips
     }

@@ -24,7 +24,7 @@ struct SharedTripTests {
     @Test func invalidFormatsFieldsRelationshipsAndOversizedFilesAreRejected() throws {
         let package = try package()
         let data = try package.encoded()
-        for (field, value) in [("format", "unknown" as Any), ("version", 3), ("id", "bad-id"), ("exportedAt", NSNull())] {
+        for (field, value) in [("format", "unknown" as Any), ("version", 4), ("id", "bad-id"), ("exportedAt", NSNull())] {
             var json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
             json[field] = value
             #expect(throws: TripError.self) { try SharedTripPackage.decode(JSONSerialization.data(withJSONObject: json)) }

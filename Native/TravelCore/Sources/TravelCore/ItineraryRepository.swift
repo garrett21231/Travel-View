@@ -5,6 +5,7 @@ extension TripRepository {
     public struct Snapshot: Sendable {
         public let trips: [Trip]
         public let items: [ItineraryItem]
+        public let checklist: [ChecklistItem]
         public let sharedTripImports: [String: String]
         public let deletedTrips: [DeletedTrip]
     }
@@ -18,12 +19,13 @@ extension TripRepository {
 
     static func snapshot(in db: Database) throws -> Snapshot {
         let receipts = try Row.fetchAll(db, sql: "SELECT packageID, tripID FROM sharedTripImports")
-        let deleted = try Row.fetchAll(db, sql: "SELECT id, tripID, name, deletedAt, itemCount FROM deletedTrips ORDER BY deletedAt DESC, id")
+        let deleted = try Row.fetchAll(db, sql: "SELECT id, tripID, name, deletedAt, itemCount, checklistCount FROM deletedTrips ORDER BY deletedAt DESC, id")
         return Snapshot(trips: try Trip.order(Column("createdAt").desc, Column("id")).fetchAll(db),
                         items: try ItineraryItem.fetchAll(db),
+                        checklist: try ChecklistItem.fetchAll(db),
                         sharedTripImports: Dictionary(uniqueKeysWithValues: receipts.map { ($0["packageID"] as String, $0["tripID"] as String) }),
                         deletedTrips: deleted.map { DeletedTrip(id: $0["id"], tripID: $0["tripID"], name: $0["name"],
-                                                              deletedAt: $0["deletedAt"], itemCount: $0["itemCount"]) })
+                                                              deletedAt: $0["deletedAt"], itemCount: $0["itemCount"], checklistCount: $0["checklistCount"]) })
     }
 
     public func saveItem(_ input: ItineraryInput, id: String, tripID: String) async throws -> ItineraryItem {

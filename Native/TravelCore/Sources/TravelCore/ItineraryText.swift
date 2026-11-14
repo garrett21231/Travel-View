@@ -1,18 +1,20 @@
 import Foundation
 
-/// Notes and references are opt-in for each preview. These choices never change saved plans.
+/// Notes, references and checklist tasks are opt-in for each preview. These choices never change saved plans.
 public struct ItineraryTextOptions: Equatable, Sendable {
     public var includeNotes: Bool
     public var includeReferences: Bool
+    public var includeChecklist: Bool
 
-    public init(includeNotes: Bool = false, includeReferences: Bool = false) {
+    public init(includeNotes: Bool = false, includeReferences: Bool = false, includeChecklist: Bool = false) {
         self.includeNotes = includeNotes; self.includeReferences = includeReferences
+        self.includeChecklist = includeChecklist
     }
 }
 
 /// A readable copy, separate from the JSON backup used to restore app records.
 public enum ItineraryText {
-    public static func make(trip: Trip, items: [ItineraryItem], options: ItineraryTextOptions = .init()) -> String {
+    public static func make(trip: Trip, items: [ItineraryItem], options: ItineraryTextOptions = .init(), checklist: [ChecklistItem] = []) -> String {
         // Scope here as well as in the UI, so callers cannot include another trip's records by accident.
         let days = ItineraryTimeline.days(for: items.filter { $0.tripID == trip.id })
         var lines = ["Travel View itinerary", trip.name, "Destinations: \(trip.destinationText)", "Dates: \(trip.dateText)", "",
@@ -49,6 +51,13 @@ public enum ItineraryText {
                         lines += ["  Notes:", indented(item.notes, spaces: 4)]
                     }
                 }
+            }
+        }
+        if options.includeChecklist {
+            let tasks = ChecklistItem.ordered(checklist.filter { $0.tripID == trip.id })
+            if !tasks.isEmpty {
+                lines += ["", "Checklist"]
+                for item in tasks { lines.append("- [\(item.isCompleted ? "x" : " ")] \(item.title)") }
             }
         }
         return lines.joined(separator: "\n") + "\n"

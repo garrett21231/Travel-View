@@ -24,6 +24,11 @@ extension TripRepository {
             for (item, id) in zip(package.items.sorted { $0.id < $1.id }, newIDs) {
                 try ItineraryItem(id: id, tripID: tripID, input: item.input, createdAt: item.createdAt).insert(db)
             }
+            let checklistIDs = package.checklist.map { _ in UUID().uuidString }.sorted()
+            for (item, id) in zip(package.checklist.sorted { $0.id < $1.id }, checklistIDs) {
+                try ChecklistItem(id: id, tripID: tripID, title: item.title,
+                                  isCompleted: item.isCompleted, createdAt: item.createdAt).insert(db)
+            }
             try db.execute(sql: "INSERT INTO sharedTripImports (packageID, tripID) VALUES (?, ?)", arguments: [package.id, tripID])
             return SharedTripImportResult(snapshot: try Self.snapshot(in: db), tripID: tripID, alreadyImported: false)
         }

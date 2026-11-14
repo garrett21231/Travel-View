@@ -29,6 +29,7 @@
 		B1000000000000000000005A /* SharedTripViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004A; };
 		B1000000000000000000005B /* RecentlyDeletedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004B; };
 		B1000000000000000000005C /* ItineraryScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004C; };
+		B1000000000000000000005D /* ChecklistViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000004D; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 		B1000000000000000000004A /* SharedTripViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTripViews.swift; sourceTree = "<group>"; };
 		B1000000000000000000004B /* RecentlyDeletedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyDeletedView.swift; sourceTree = "<group>"; };
 		B1000000000000000000004C /* ItineraryScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryScheduleView.swift; sourceTree = "<group>"; };
+		B1000000000000000000004D /* ChecklistViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecklistViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +114,7 @@
 				B10000000000000000000042 /* ItineraryDayView.swift */,
 				B10000000000000000000045 /* ItineraryBrowserView.swift */,
 				B1000000000000000000004C /* ItineraryScheduleView.swift */,
+				B1000000000000000000004D /* ChecklistViews.swift */,
 				B10000000000000000000046 /* PlanningSummaryView.swift */,
 				B1000000000000000000004A /* SharedTripViews.swift */,
 				B1000000000000000000004B /* RecentlyDeletedView.swift */,
@@ -218,6 +221,7 @@
 				B10000000000000000000052 /* ItineraryDayView.swift in Sources */,
 				B10000000000000000000055 /* ItineraryBrowserView.swift in Sources */,
 				B1000000000000000000005C /* ItineraryScheduleView.swift in Sources */,
+				B1000000000000000000005D /* ChecklistViews.swift in Sources */,
 				B10000000000000000000056 /* PlanningSummaryView.swift in Sources */,
 				B10000000000000000000058 /* ItineraryTextDocument.swift in Sources */,
 				B10000000000000000000057 /* ItineraryShareView.swift in Sources */,

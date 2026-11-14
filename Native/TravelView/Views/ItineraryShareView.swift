@@ -15,7 +15,7 @@ struct ItineraryShareView: View {
         NavigationStack {
             Group {
                 if let trip = store.trips.first(where: { $0.id == tripID }) {
-                    let text = ItineraryText.make(trip: trip, items: store.items(for: tripID), options: options)
+                    let text = ItineraryText.make(trip: trip, items: store.items(for: tripID), options: options, checklist: store.checklistItems(for: tripID))
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             VStack(alignment: .leading, spacing: 16) {
@@ -24,7 +24,9 @@ struct ItineraryShareView: View {
                                     .accessibilityIdentifier("share-include-notes")
                                 Toggle("Include booking references", isOn: $options.includeReferences)
                                     .accessibilityIdentifier("share-include-references")
-                                Text("Notes and references start off. Review the preview before sharing or saving.")
+                                Toggle("Include checklist", isOn: $options.includeChecklist)
+                                    .accessibilityIdentifier("share-include-checklist")
+                                Text("Notes, references and checklist start off. Review the preview before sharing or saving.")
                                     .font(.caption).foregroundStyle(TravelTheme.secondary)
                                 ViewThatFits(in: .horizontal) {
                                     HStack(spacing: 12) { actions(text: text) }

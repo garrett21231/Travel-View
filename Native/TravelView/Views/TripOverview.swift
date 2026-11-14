@@ -46,6 +46,7 @@ struct TripOverview: View {
                 .tripPanel()
 
                 PlanningSummaryView(tripID: trip.id, summary: ItinerarySummary(items: items))
+                ChecklistSummaryView(store: store, tripID: trip.id)
                 if !days.isEmpty { comingUp(days: days) }
                 itineraryPanel(days: days)
 

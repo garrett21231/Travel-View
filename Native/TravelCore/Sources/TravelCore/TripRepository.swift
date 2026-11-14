@@ -102,6 +102,19 @@ public final class TripRepository: Sendable {
                 CREATE INDEX itineraryItems_tripID ON itineraryItems(tripID);
                 """)
         }
+        migrator.registerMigration("createTripChecklists") { db in
+            try db.execute(sql: """
+                CREATE TABLE checklistItems (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    tripID TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    isCompleted BOOLEAN NOT NULL DEFAULT 0 CHECK (isCompleted IN (0, 1)),
+                    createdAt DATETIME NOT NULL
+                );
+                CREATE INDEX checklistItems_tripID ON checklistItems(tripID);
+                ALTER TABLE deletedTrips ADD COLUMN checklistCount INTEGER NOT NULL DEFAULT 0;
+                """)
+        }
         try migrator.migrate(database)
     }
 
@@ -131,8 +144,10 @@ public final class TripRepository: Sendable {
     public struct ImportResult: Sendable {
         public let trips: [Trip]
         public let items: [ItineraryItem]
+        public let checklist: [ChecklistItem]
         public let added: Int
         public let addedItems: Int
+        public let addedChecklistItems: Int
     }
 
     /// Import is all-or-nothing. Existing IDs are preserved, so a retry is safe.
@@ -154,8 +169,18 @@ public final class TripRepository: Sendable {
                 try item.insert(db)
                 addedItems += 1
             }
+            var addedChecklistItems = 0
+            for item in incoming.checklist {
+                if let existing = try ChecklistItem.fetchOne(db, key: item.id) {
+                    guard existing.tripID == item.tripID else { throw TripError("A checklist identifier belongs to another trip.") }
+                    continue
+                }
+                try item.insert(db)
+                addedChecklistItems += 1
+            }
             return ImportResult(trips: try Trip.order(Column("createdAt").desc, Column("id")).fetchAll(db),
-                                items: try ItineraryItem.fetchAll(db), added: added, addedItems: addedItems)
+                                items: try ItineraryItem.fetchAll(db), checklist: try ChecklistItem.fetchAll(db),
+                                added: added, addedItems: addedItems, addedChecklistItems: addedChecklistItems)
         }
     }
 }

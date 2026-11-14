@@ -27,7 +27,7 @@ struct RecentlyDeletedView: View {
             Group {
                 if store.deletedTrips.isEmpty {
                     ContentUnavailableView("No deleted trips", systemImage: "trash",
-                                           description: Text("Trips you delete can be restored here with all their saved plans."))
+                                           description: Text("Trips you delete can be restored here with all their saved plans and checklist items."))
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 16) {
@@ -36,6 +36,10 @@ struct RecentlyDeletedView: View {
                                     Text(trip.name).font(.headline)
                                     Text("\(trip.itemCount) \(trip.itemCount == 1 ? "itinerary item" : "itinerary items") · Deleted \(trip.deletedAt.formatted(date: .abbreviated, time: .shortened))")
                                         .font(.caption).foregroundStyle(TravelTheme.secondary)
+                                    if trip.checklistCount > 0 {
+                                        Text("\(trip.checklistCount) \(trip.checklistCount == 1 ? "checklist item" : "checklist items")")
+                                            .font(.caption).foregroundStyle(TravelTheme.secondary)
+                                    }
                                     ViewThatFits(in: .horizontal) {
                                         HStack(spacing: 12) { actions(for: trip) }
                                             .fixedSize(horizontal: true, vertical: false)
@@ -80,7 +84,7 @@ struct RecentlyDeletedView: View {
         } message: { selection in
             switch selection {
             case .confirmDeletion:
-                Text("This trip and all its saved plans will be removed from Recently deleted on this device. This can’t be undone. Existing backup files and copies shared with others are kept.")
+                Text("This trip and all its saved plans and checklist items will be removed from Recently deleted on this device. This can’t be undone. Existing backup files and copies shared with others are kept.")
             case .failure(_, let message): Text(message)
             }
         }

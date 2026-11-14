@@ -19,7 +19,7 @@ struct ShareTripFileView: View {
                     if let package, let document {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("A complete trip copy").font(.headline)
-                            Text("This file includes all saved details, including notes, booking references, budget and flight lookup snapshots. The recipient can import it into Travel View and edit their own copy.")
+                            Text("This file includes all saved details, including notes, booking references, budget, checklist and flight lookup snapshots. The recipient can import it into Travel View and edit their own copy.")
                                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
                             Text("Send it with AirDrop, Messages or Mail. You don’t need to save a file first, and no Travel View account is required.")
                                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
@@ -31,7 +31,7 @@ struct ShareTripFileView: View {
                         receivingHelp
                         VStack(alignment: .leading, spacing: 14) {
                             Text("For someone without Travel View").font(.headline)
-                            Text("Share a readable itinerary with optional notes and booking references.")
+                            Text("Share a readable itinerary with optional notes, booking references and checklist.")
                                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
                             Button("Share readable itinerary", systemImage: "doc.plaintext") { sharingText = true }
                                 .buttonStyle(.bordered).accessibilityIdentifier("preview-itinerary-share")
@@ -96,7 +96,7 @@ struct ShareTripFileView: View {
         error = nil
         do {
             guard let trip = store.trips.first(where: { $0.id == tripID }) else { throw TripError("This trip is no longer available.") }
-            let package = try SharedTripPackage(trip: trip, items: store.items(for: tripID))
+            let package = try SharedTripPackage(trip: trip, items: store.items(for: tripID), checklist: store.checklistItems(for: tripID))
             let document = try TripFileDocument(package: package)
             self.package = package; self.document = document
         } catch { self.error = error.localizedDescription }
@@ -175,13 +175,15 @@ private struct SharedTripPreview: View {
             Text("Travelers: \(package.trip.plannedTravelers) planned")
             Text("Budget: \(package.trip.budgetCents.map(Money.formatted) ?? "Not set")")
             Text("\(package.items.count) \(package.items.count == 1 ? "itinerary item" : "itinerary items")")
+            Text("\(package.checklist.count) \(package.checklist.count == 1 ? "checklist item" : "checklist items")")
             Text("Exported \(package.exportedAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(.caption).foregroundStyle(TravelTheme.secondary)
         }.tripPanel()
         VStack(alignment: .leading, spacing: 14) {
             Text("Itinerary preview").font(.headline).accessibilityAddTraits(.isHeader)
             Text(ItineraryText.make(trip: package.trip, items: package.items,
-                                    options: ItineraryTextOptions(includeNotes: true, includeReferences: true)))
+                                    options: ItineraryTextOptions(includeNotes: true, includeReferences: true, includeChecklist: true),
+                                    checklist: package.checklist))
                 .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
         }.tripPanel()
         let snapshots = package.items.filter { $0.flight?.lastLookup != nil }

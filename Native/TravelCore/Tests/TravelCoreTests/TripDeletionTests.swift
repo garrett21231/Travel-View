@@ -168,7 +168,7 @@ struct TripDeletionTests {
         }
         let fixture = try DatabaseQueue(path: url.path)
         try await fixture.write { db in
-            try db.execute(sql: "DROP TABLE deletedTrips; DELETE FROM grdb_migrations WHERE identifier = 'createDeletedTrips'")
+            try db.execute(sql: "DROP TABLE checklistItems; DROP TABLE deletedTrips; DELETE FROM grdb_migrations WHERE identifier IN ('createDeletedTrips', 'createTripChecklists')")
         }
         let upgraded = try TripRepository(databaseURL: url)
         let snapshot = try await upgraded.loadSnapshot()

@@ -109,6 +109,9 @@ struct TripLibraryView: View {
                             .navigationDestination(for: ItineraryScheduleSelection.self) { selection in
                                 ItineraryScheduleView(store: store, selection: selection)
                             }
+                            .navigationDestination(for: ChecklistSelection.self) { selection in
+                                TripChecklistView(store: store, tripID: selection.tripID)
+                            }
                     }
                     .id(trip.id)
                 } else {
@@ -160,7 +163,7 @@ struct TripLibraryView: View {
             }
             Button("Cancel", role: .cancel) { deletingTrip = nil }
         } message: {
-            Text("Moves this trip and all its saved plans to Recently deleted on this device. You can restore them from the collection menu. Copies shared with others stay as they are.")
+            Text("Moves this trip and all its saved plans and checklist items to Recently deleted on this device. You can restore them from the collection menu. Copies shared with others stay as they are.")
         }
         .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json,
                       defaultFilename: "Travel View Backup") { result in
@@ -258,7 +261,7 @@ struct TripLibraryView: View {
 
     private func exportTrips() {
         do {
-            exportDocument = TripBackupDocument(data: try TripArchive.encode(store.trips, items: store.itinerary))
+            exportDocument = TripBackupDocument(data: try TripArchive.encode(store.trips, items: store.itinerary, checklist: store.checklist))
             exporting = true
         } catch { notice = error.localizedDescription }
     }
@@ -296,7 +299,7 @@ struct TripLibraryView: View {
                 }.value
                 let result = try await store.restore(data)
                 collection = .all
-                notice = "Imported \(result.added) trips and \(result.addedItems) itinerary items. Existing records keep their current details."
+                notice = "Imported \(result.added) trips, \(result.addedItems) itinerary items and \(result.addedChecklistItems) checklist items. Existing records keep their current details."
             } catch { notice = error.localizedDescription }
         }
     }
