@@ -20,6 +20,8 @@ struct ItineraryEditor: View {
         var title: String
         var location: String
         var notes: String
+        var bookingState: BookingState
+        var reference: String
         var hasDates: Bool
         var hasArrivalDate: Bool
         var hasEndDate: Bool
@@ -40,6 +42,8 @@ struct ItineraryEditor: View {
             title = item?.title ?? ""
             location = item?.location ?? ""
             notes = item?.notes ?? ""
+            bookingState = item?.bookingState ?? .planned
+            reference = item?.confirmationReference ?? ""
             hasDates = item?.start != nil
             hasArrivalDate = item == nil || item?.end != nil
             hasEndDate = item.map { $0.end != nil } ?? (kind == .lodging)
@@ -57,9 +61,7 @@ struct ItineraryEditor: View {
         }
 
         mutating func choose(_ schedule: FlightSchedule, queryDay: TravelDay) {
-            let reference = flight.bookingReference
             flight = FlightDetails(schedule: schedule)
-            flight.bookingReference = reference
             title = "\(schedule.number) · \(schedule.departure.airport) to \(schedule.arrival.airport)"
             hasDates = true
             hasArrivalDate = schedule.arrival.local != nil
@@ -73,13 +75,15 @@ struct ItineraryEditor: View {
 
         func input() -> ItineraryInput {
             var details = flight
+            details.bookingReference = reference
             details.departureLocal = hasDates && hasDepartureTime ? LocalMoment(day: TravelDay(start), clockFrom: departureTime) : nil
             details.arrivalLocal = hasDates && hasArrivalDate && hasArrivalTime ? LocalMoment(day: TravelDay(end), clockFrom: arrivalTime) : nil
             return ItineraryInput(kind: kind, title: title, start: hasDates ? TravelDay(start) : nil,
                                   end: hasDates && (kind == .flight ? hasArrivalDate : hasEndDate) ? TravelDay(end) : nil,
                                   location: location, notes: notes, flight: kind == .flight ? details : nil,
                                   startTime: kind != .flight && hasDates && hasStartTime ? LocalClock(pickerDate: startClock) : nil,
-                                  endTime: kind != .flight && hasDates && hasEndDate && hasEndTime ? LocalClock(pickerDate: endClock) : nil)
+                                  endTime: kind != .flight && hasDates && hasEndDate && hasEndTime ? LocalClock(pickerDate: endClock) : nil,
+                                  bookingState: bookingState, reservationReference: kind == .flight ? "" : reference)
         }
     }
 
@@ -102,9 +106,23 @@ struct ItineraryEditor: View {
                     }
                     TextField("Title", text: $draft.title).focused($focused)
                         .accessibilityIdentifier("itinerary-title")
-                    if draft.kind != .flight {
-                        TextField("Location or address (optional)", text: $draft.location).focused($focused)
+                    TextField("Location or address (optional)", text: $draft.location).focused($focused)
+                }
+                Section {
+                    Picker("Booking state", selection: $draft.bookingState) {
+                        ForEach(BookingState.allCases) { state in
+                            Label(state.title, systemImage: state.symbol).tag(state)
+                        }
                     }
+                    .accessibilityIdentifier("itinerary-booking-state")
+                    TextField(draft.kind == .flight ? "Booking reference (optional)" : "Confirmation reference (optional)", text: $draft.reference)
+                        .focused($focused)
+                        .accessibilityIdentifier("itinerary-reference")
+                        #if os(iOS)
+                        .textInputAutocapitalization(.characters).autocorrectionDisabled()
+                        #endif
+                } header: { Text("Reservation") } footer: {
+                    Text("Choose the booking state yourself. A reference or a flight lookup does not mark a plan as booked.")
                 }
                 if draft.kind == .flight { flightFields }
                 Section {
@@ -228,7 +246,6 @@ struct ItineraryEditor: View {
                 #if os(iOS)
                 .textInputAutocapitalization(.characters).autocorrectionDisabled()
                 #endif
-            TextField("Booking reference (optional)", text: $draft.flight.bookingReference).focused($focused)
         } header: { Text("Flight") } footer: {
             Text("Look up a schedule or enter the details yourself. Review the details before saving.")
         }

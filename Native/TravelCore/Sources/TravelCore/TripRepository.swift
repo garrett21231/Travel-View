@@ -52,6 +52,13 @@ public final class TripRepository: Sendable {
                 table.add(column: "endTime", .text)
             }
         }
+        migrator.registerMigration("addItineraryReservations") { db in
+            try db.execute(sql: """
+                ALTER TABLE itineraryItems ADD COLUMN bookingState TEXT NOT NULL DEFAULT 'planned'
+                    CHECK (bookingState IN ('idea', 'planned', 'booked'));
+                ALTER TABLE itineraryItems ADD COLUMN reservationReference TEXT NOT NULL DEFAULT '';
+                """)
+        }
         try migrator.migrate(database)
     }
 

@@ -18,6 +18,7 @@ struct FlightUpdateTests {
         #expect(saved.flight?.arrivalLocal?.clock == "07:50")
         #expect(saved.flight?.airline == "Updated airline")
         #expect(saved.flight?.bookingReference == "KEEP-ME")
+        #expect(saved.bookingState == .booked)
         #expect(saved.title == item.title)
         #expect(saved.notes == item.notes)
         #expect(saved.location == item.location)
@@ -111,7 +112,7 @@ struct FlightUpdateTests {
         let base = try await repository.saveItem(item(FlightDetails(schedule: schedule())).input, id: UUID().uuidString, tripID: trip.id)
         let review = try FlightUpdate(item: base, schedule: schedule(arrival: "2027-03-05T08:00"))
         var edited = base.input
-        edited.notes = "A newer edit in another window"
+        edited.bookingState = .idea
         let newer = try await repository.saveItem(edited, id: base.id, tripID: trip.id)
         await #expect(throws: TripError.self) { try await repository.applyFlightUpdate(review, selection: review.defaultSelection) }
         #expect(try await repository.loadSnapshot().items == [newer])
@@ -130,7 +131,8 @@ struct FlightUpdateTests {
     private func item(_ plan: FlightDetails) -> ItineraryItem {
         ItineraryItem(id: UUID().uuidString, tripID: UUID().uuidString,
                       input: ItineraryInput(kind: .flight, title: "My flight", start: TravelDay(rawValue: "2027-03-04"),
-                                            end: TravelDay(rawValue: "2027-03-05"), location: "Keep location", notes: "Keep my notes", flight: plan),
+                                            end: TravelDay(rawValue: "2027-03-05"), location: "Keep location", notes: "Keep my notes", flight: plan,
+                                            bookingState: .booked),
                       createdAt: Date(timeIntervalSince1970: 1_700_000_000))
     }
     private func directory() -> URL { FileManager.default.temporaryDirectory.appendingPathComponent("FlightUpdateTests-\(UUID().uuidString)") }

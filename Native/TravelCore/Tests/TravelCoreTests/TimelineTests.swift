@@ -117,11 +117,13 @@ struct TimelineTests {
         let target = try TripRepository(databaseURL: directory.appendingPathComponent("target.sqlite"))
         #expect(try await target.restore(data).items == [timed])
         var old = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        #expect(old["version"] as? Int == 3)
+        #expect(old["version"] as? Int == 4)
         old["version"] = 2
         var items = try #require(old["items"] as? [[String: Any]])
         items[0].removeValue(forKey: "startTime")
         items[0].removeValue(forKey: "endTime")
+        items[0].removeValue(forKey: "bookingState")
+        items[0].removeValue(forKey: "reservationReference")
         old["items"] = items
         let oldTarget = try TripRepository(databaseURL: directory.appendingPathComponent("old.sqlite"))
         let restored = try await oldTarget.restore(JSONSerialization.data(withJSONObject: old))

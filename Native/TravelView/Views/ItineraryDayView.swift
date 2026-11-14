@@ -62,51 +62,48 @@ private struct ItineraryEventRow: View {
                     Label("Actions for \(event.item.title), \(event.title.lowercased())", systemImage: "ellipsis.circle").labelStyle(.iconOnly)
                 }.disabled(!canEdit)
             }
-            if event.day != nil {
-                Text(event.timeText).font(.subheadline.weight(.medium))
-                    .foregroundStyle(event.time == nil ? TravelTheme.secondary : TravelTheme.ink)
+            NavigationLink(value: ItinerarySelection(id: event.item.id, tripID: event.item.tripID)) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 9) {
+                        if event.day != nil {
+                            Text(event.timeText).font(.subheadline.weight(.medium))
+                                .foregroundStyle(event.time == nil ? TravelTheme.secondary : TravelTheme.ink)
+                        }
+                        Text(event.item.title).font(.headline).foregroundStyle(TravelTheme.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        BookingStateBadge(state: event.item.bookingState)
+                        if let flight = event.item.flight {
+                            Text("\(flight.number) · \(airport(flight.departureAirport)) → \(airport(flight.arrivalAirport))")
+                                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                        } else if !event.item.location.isEmpty {
+                            Label(event.item.location, systemImage: "mappin.and.ellipse")
+                                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                        }
+                        if event.item.start != event.item.end, let start = event.item.start, let end = event.item.end {
+                            Text("\(start.formatted) – \(end.formatted)").font(.caption).foregroundStyle(TravelTheme.secondary)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                        .foregroundStyle(TravelTheme.secondary).padding(.top, 4).accessibilityHidden(true)
+                }.contentShape(Rectangle())
             }
-            Text(event.item.title).font(.headline).fixedSize(horizontal: false, vertical: true)
-            if let flight = event.item.flight {
-                Text("\(flight.number) · \(airport(flight.departureAirport)) → \(airport(flight.arrivalAirport))")
-                    .font(.subheadline).foregroundStyle(TravelTheme.secondary)
-            } else if !event.item.location.isEmpty {
-                Label(event.item.location, systemImage: "mappin.and.ellipse")
-                    .font(.subheadline).foregroundStyle(TravelTheme.secondary)
-            }
-            if event.item.start != event.item.end, let start = event.item.start, let end = event.item.end {
-                Text("\(start.formatted) – \(end.formatted)").font(.caption).foregroundStyle(TravelTheme.secondary)
-            }
-            if hasDetails {
-                DisclosureGroup("Details") { details.padding(.top, 8) }
-                    .font(.subheadline)
-            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibleSummary)
+            .accessibilityHint("Open \(event.item.kind.title.lowercased()) details")
+            .accessibilityIdentifier("open-itinerary-\(event.id)")
         }
-        .textSelection(.enabled)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("itinerary-event-\(event.id)")
     }
 
-    private var hasDetails: Bool { event.item.flight != nil || !event.item.notes.isEmpty }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let flight = event.item.flight {
-                if let departure = flight.departureLocal { Text("Departs \(departure.formatted)") }
-                if let arrival = flight.arrivalLocal { Text("Arrives \(arrival.formatted)") }
-                Text("Airport local times").font(.caption)
-                if !flight.airline.isEmpty { Text(flight.airline) }
-                if !flight.bookingReference.isEmpty { Text("Booking reference: \(flight.bookingReference)") }
-                if let snapshot = flight.lastLookup {
-                    Text("Schedule from \(snapshot.provider), looked up \(snapshot.fetchedAt.formatted(date: .abbreviated, time: .shortened)). Review with your airline before travel.")
-                        .font(.caption)
-                }
-            }
-            if !event.item.notes.isEmpty { Text(event.item.notes) }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(TravelTheme.secondary)
-    }
-
     private func airport(_ value: String) -> String { value.isEmpty ? "TBD" : value }
+
+    /// Keep the visible timing and planning state available when VoiceOver treats the row as one link.
+    private var accessibleSummary: String {
+        var parts = [event.item.title, event.timeText, "Booking state: \(event.item.bookingState.title)"]
+        if let flight = event.item.flight {
+            parts.append("\(flight.number), \(airport(flight.departureAirport)) to \(airport(flight.arrivalAirport))")
+        } else if !event.item.location.isEmpty { parts.append(event.item.location) }
+        return parts.joined(separator: ". ")
+    }
 }

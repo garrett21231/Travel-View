@@ -64,13 +64,17 @@ public struct ItineraryInput: Equatable, Sendable {
     public var flight: FlightDetails?
     public var startTime: LocalClock?
     public var endTime: LocalClock?
+    public var bookingState: BookingState
+    public var reservationReference: String
 
     public init(kind: ItineraryKind, title: String, start: TravelDay? = nil, end: TravelDay? = nil,
                 location: String = "", notes: String = "", flight: FlightDetails? = nil,
-                startTime: LocalClock? = nil, endTime: LocalClock? = nil) {
+                startTime: LocalClock? = nil, endTime: LocalClock? = nil,
+                bookingState: BookingState = .planned, reservationReference: String = "") {
         self.kind = kind; self.title = title; self.start = start; self.end = end
         self.location = location; self.notes = notes; self.flight = flight
         self.startTime = startTime; self.endTime = endTime
+        self.bookingState = bookingState; self.reservationReference = reservationReference
     }
 
     public func validated() throws -> Self {
@@ -78,9 +82,14 @@ public struct ItineraryInput: Equatable, Sendable {
         value.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         value.location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         value.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Flight references retain their existing home in FlightDetails for archive compatibility.
+        value.reservationReference = kind == .flight ? "" : reservationReference.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.title.isEmpty, value.title.count <= 160 else { throw TripError("Enter a title of up to 160 characters.") }
         guard value.location.count <= 300, value.notes.count <= 4000 else {
             throw TripError("Use up to 300 characters for the location and 4,000 for notes.")
+        }
+        guard value.reservationReference.count <= 80 else {
+            throw TripError("Keep the confirmation reference within 80 characters.")
         }
         if kind == .flight {
             guard let flight else { throw TripError("Add the flight details.") }
@@ -120,6 +129,8 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
     public let flight: FlightDetails?
     public let startTime: LocalClock?
     public let endTime: LocalClock?
+    public let bookingState: BookingState
+    public let reservationReference: String
     public let createdAt: Date
 
     init(id: String, tripID: String, input: ItineraryInput, createdAt: Date) {
@@ -127,10 +138,37 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
         start = input.start; end = input.end; location = input.location; notes = input.notes
         flight = input.flight; self.createdAt = createdAt
         startTime = input.startTime; endTime = input.endTime
+        bookingState = input.bookingState; reservationReference = input.reservationReference
     }
     public var input: ItineraryInput {
         ItineraryInput(kind: kind, title: title, start: start, end: end, location: location, notes: notes,
-                       flight: flight, startTime: startTime, endTime: endTime)
+                       flight: flight, startTime: startTime, endTime: endTime,
+                       bookingState: bookingState, reservationReference: reservationReference)
+    }
+    public var confirmationReference: String { kind == .flight ? flight?.bookingReference ?? "" : reservationReference }
+    public var mapsURL: URL? { LocationLink.mapsSearch(for: location) }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, tripID, kind, title, start, end, location, notes, flight, startTime, endTime, bookingState, reservationReference, createdAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        tripID = try values.decode(String.self, forKey: .tripID)
+        kind = try values.decode(ItineraryKind.self, forKey: .kind)
+        title = try values.decode(String.self, forKey: .title)
+        start = try values.decodeIfPresent(TravelDay.self, forKey: .start)
+        end = try values.decodeIfPresent(TravelDay.self, forKey: .end)
+        location = try values.decode(String.self, forKey: .location)
+        notes = try values.decode(String.self, forKey: .notes)
+        flight = try values.decodeIfPresent(FlightDetails.self, forKey: .flight)
+        startTime = try values.decodeIfPresent(LocalClock.self, forKey: .startTime)
+        endTime = try values.decodeIfPresent(LocalClock.self, forKey: .endTime)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        // Native backups made before version 4 have neither field. Never infer Booked from a reference.
+        bookingState = values.contains(.bookingState) ? try values.decode(BookingState.self, forKey: .bookingState) : .planned
+        reservationReference = values.contains(.reservationReference) ? try values.decode(String.self, forKey: .reservationReference) : ""
     }
     public var dateText: String {
         guard let start else { return "Date to be decided" }

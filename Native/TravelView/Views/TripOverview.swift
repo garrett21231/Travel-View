@@ -61,6 +61,9 @@ struct TripOverview: View {
         }
         .background(TravelTheme.background)
         .navigationTitle("Overview")
+        .navigationDestination(for: ItinerarySelection.self) { selection in
+            ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -80,8 +80,10 @@ struct TripLibraryView: View {
             }
         } detail: {
             if let trip = selectedTrip {
-                TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
-                    .id(trip.id)
+                NavigationStack {
+                    TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
+                }
+                .id(trip.id)
             } else {
                 ContentUnavailableView("Your next adventure", systemImage: "suitcase.rolling",
                                        description: Text("Choose a trip or start planning a new one."))
