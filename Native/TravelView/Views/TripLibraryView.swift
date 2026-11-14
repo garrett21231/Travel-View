@@ -19,6 +19,7 @@ struct TripLibraryView: View {
     @State private var readingSharedTrip = false
     @State private var readTask: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Collection: String, CaseIterable, Identifiable {
         case upcoming = "Upcoming", all = "All trips"
@@ -110,6 +111,7 @@ struct TripLibraryView: View {
             .navigationSplitViewStyle(.balanced)
             incomingTripBanner
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: pendingPackage?.id)
         .sheet(item: $reviewingPackage) { package in
             SharedTripImportView(store: store, package: package) { id in
                 collection = .all
@@ -155,14 +157,13 @@ struct TripLibraryView: View {
     /// Outside the split view so it remains visible in either compact column on iPhone.
     @ViewBuilder private var incomingTripBanner: some View {
         if let package = pendingPackage {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Trip file ready: \(package.trip.name)").font(.subheadline.weight(.semibold))
-                HStack {
-                    Button("Review shared trip") { reviewingPackage = package }
-                        .buttonStyle(.borderedProminent).accessibilityIdentifier("review-shared-trip")
-                    Button("Dismiss") { pendingPackage = nil }
-                }
-            }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(TravelTheme.surface)
+            SharedTripNotice(tripName: package.trip.name,
+                             onReview: { reviewingPackage = package },
+                             onDismiss: { pendingPackage = nil })
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(TravelTheme.background)
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
         } else if readingSharedTrip { ProgressView("Reading shared trip…").padding(14) }
     }
 
@@ -246,6 +247,65 @@ struct TripLibraryView: View {
                 notice = "Imported \(result.added) trips and \(result.addedItems) itinerary items. Existing records keep their current details."
             } catch { notice = error.localizedDescription }
         }
+    }
+}
+
+/// A persistent notice reserves its own space, so receiving a trip never covers the list or opens a modal.
+private struct SharedTripNotice: View {
+    let tripName: String
+    let onReview: () -> Void
+    let onDismiss: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 20) {
+                heading.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
+                HStack(spacing: 12) { actions }.fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(alignment: .leading, spacing: 14) {
+                heading
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { actions }.fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 10) { actions }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: 760, alignment: .leading)
+        .background(TravelTheme.surface, in: RoundedRectangle(cornerRadius: 20))
+        .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(TravelTheme.accent.opacity(0.6), lineWidth: 1) }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("incoming-trip-banner")
+    }
+
+    private var heading: some View {
+        HStack(alignment: .center, spacing: 12) {
+            if !dynamicTypeSize.isAccessibilitySize {
+                Image(systemName: "tray.and.arrow.down.fill")
+                    .font(.title3)
+                    .foregroundStyle(TravelTheme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(TravelTheme.tint, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Shared trip received").font(.headline).foregroundStyle(TravelTheme.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(tripName).font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button("Review shared trip", action: onReview)
+            .buttonStyle(.borderedProminent).controlSize(.large)
+            .accessibilityIdentifier("review-shared-trip")
+        Button("Dismiss", action: onDismiss)
+            .buttonStyle(.borderless).controlSize(.large)
     }
 }
 
