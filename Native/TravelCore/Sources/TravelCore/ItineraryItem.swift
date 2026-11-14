@@ -2,11 +2,11 @@ import Foundation
 import GRDB
 
 public enum ItineraryKind: String, Codable, CaseIterable, Identifiable, Sendable, DatabaseValueConvertible {
-    case flight, lodging, activity
+    case flight, lodging, activity, transport
     public var id: Self { self }
     public var title: String { rawValue.capitalized }
     public var symbol: String {
-        switch self { case .flight: "airplane"; case .lodging: "bed.double"; case .activity: "map" }
+        switch self { case .flight: "airplane"; case .lodging: "bed.double"; case .activity: "map"; case .transport: "tram.fill" }
     }
 }
 
@@ -66,15 +66,17 @@ public struct ItineraryInput: Equatable, Sendable {
     public var endTime: LocalClock?
     public var bookingState: BookingState
     public var reservationReference: String
+    public var transport: TransportDetails?
 
     public init(kind: ItineraryKind, title: String, start: TravelDay? = nil, end: TravelDay? = nil,
                 location: String = "", notes: String = "", flight: FlightDetails? = nil,
                 startTime: LocalClock? = nil, endTime: LocalClock? = nil,
-                bookingState: BookingState = .planned, reservationReference: String = "") {
+                bookingState: BookingState = .planned, reservationReference: String = "", transport: TransportDetails? = nil) {
         self.kind = kind; self.title = title; self.start = start; self.end = end
         self.location = location; self.notes = notes; self.flight = flight
         self.startTime = startTime; self.endTime = endTime
         self.bookingState = bookingState; self.reservationReference = reservationReference
+        self.transport = transport
     }
 
     public func validated() throws -> Self {
@@ -92,6 +94,7 @@ public struct ItineraryInput: Equatable, Sendable {
             throw TripError("Keep the confirmation reference within 80 characters.")
         }
         if kind == .flight {
+            value.transport = nil
             guard let flight else { throw TripError("Add the flight details.") }
             value.flight = try flight.validated()
             value.start = flight.departureLocal?.day ?? start
@@ -101,13 +104,23 @@ public struct ItineraryInput: Equatable, Sendable {
             // A date-line crossing can arrive on the previous local day.
         } else {
             value.flight = nil
-            guard end == nil || (start != nil && end! >= start!) else {
-                throw TripError("Choose an end date on or after the start date.")
+            if kind == .transport {
+                guard let transport else { throw TripError("Add the transport details.") }
+                value.transport = try transport.validated()
+                guard end == nil || start != nil else {
+                    throw TripError("Choose a departure date before adding an arrival date.")
+                }
+                // Stops can be in different time zones. Their local clocks cannot establish elapsed time.
+            } else {
+                value.transport = nil
+                guard end == nil || (start != nil && end! >= start!) else {
+                    throw TripError("Choose an end date on or after the start date.")
+                }
             }
             guard startTime == nil || start != nil, endTime == nil || end != nil else {
                 throw TripError("Choose a date before adding its time.")
             }
-            if let start, start == end, let startTime, let endTime, endTime < startTime {
+            if kind != .transport, let start, start == end, let startTime, let endTime, endTime < startTime {
                 throw TripError("Choose an end time on or after the start time, or move the end to a later day.")
             }
         }
@@ -131,6 +144,7 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
     public let endTime: LocalClock?
     public let bookingState: BookingState
     public let reservationReference: String
+    public let transport: TransportDetails?
     public let createdAt: Date
 
     init(id: String, tripID: String, input: ItineraryInput, createdAt: Date) {
@@ -139,17 +153,19 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
         flight = input.flight; self.createdAt = createdAt
         startTime = input.startTime; endTime = input.endTime
         bookingState = input.bookingState; reservationReference = input.reservationReference
+        transport = input.transport
     }
     public var input: ItineraryInput {
         ItineraryInput(kind: kind, title: title, start: start, end: end, location: location, notes: notes,
                        flight: flight, startTime: startTime, endTime: endTime,
-                       bookingState: bookingState, reservationReference: reservationReference)
+                       bookingState: bookingState, reservationReference: reservationReference, transport: transport)
     }
     public var confirmationReference: String { kind == .flight ? flight?.bookingReference ?? "" : reservationReference }
     public var mapsURL: URL? { LocationLink.mapsSearch(for: location) }
+    public var symbol: String { transport?.mode.symbol ?? kind.symbol }
 
     private enum CodingKeys: String, CodingKey {
-        case id, tripID, kind, title, start, end, location, notes, flight, startTime, endTime, bookingState, reservationReference, createdAt
+        case id, tripID, kind, title, start, end, location, notes, flight, startTime, endTime, bookingState, reservationReference, transport, createdAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -163,6 +179,7 @@ public struct ItineraryItem: Identifiable, Codable, Equatable, Sendable, Fetchab
         location = try values.decode(String.self, forKey: .location)
         notes = try values.decode(String.self, forKey: .notes)
         flight = try values.decodeIfPresent(FlightDetails.self, forKey: .flight)
+        transport = try values.decodeIfPresent(TransportDetails.self, forKey: .transport)
         startTime = try values.decodeIfPresent(LocalClock.self, forKey: .startTime)
         endTime = try values.decodeIfPresent(LocalClock.self, forKey: .endTime)
         createdAt = try values.decode(Date.self, forKey: .createdAt)

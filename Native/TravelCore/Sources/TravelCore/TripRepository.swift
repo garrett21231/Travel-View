@@ -79,6 +79,29 @@ public final class TripRepository: Sendable {
                 );
                 """)
         }
+        migrator.registerMigration("addTransportPlans") { db in
+            // Rebuild the item table to expand its kind constraint. Preserve every existing field and ID.
+            try db.execute(sql: """
+                CREATE TABLE itineraryItems_transport (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    tripID TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+                    kind TEXT NOT NULL CHECK (kind IN ('flight', 'lodging', 'activity', 'transport')),
+                    title TEXT NOT NULL, start TEXT, end TEXT,
+                    location TEXT NOT NULL, notes TEXT NOT NULL, flight TEXT, createdAt DATETIME NOT NULL,
+                    startTime TEXT, endTime TEXT,
+                    bookingState TEXT NOT NULL DEFAULT 'planned' CHECK (bookingState IN ('idea', 'planned', 'booked')),
+                    reservationReference TEXT NOT NULL DEFAULT '', transport TEXT
+                );
+                INSERT INTO itineraryItems_transport
+                    (id, tripID, kind, title, start, end, location, notes, flight, createdAt,
+                     startTime, endTime, bookingState, reservationReference)
+                    SELECT id, tripID, kind, title, start, end, location, notes, flight, createdAt,
+                           startTime, endTime, bookingState, reservationReference FROM itineraryItems;
+                DROP TABLE itineraryItems;
+                ALTER TABLE itineraryItems_transport RENAME TO itineraryItems;
+                CREATE INDEX itineraryItems_tripID ON itineraryItems(tripID);
+                """)
+        }
         try migrator.migrate(database)
     }
 

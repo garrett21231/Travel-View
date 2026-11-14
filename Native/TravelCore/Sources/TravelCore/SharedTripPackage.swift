@@ -30,7 +30,9 @@ public struct SharedTripPackage: Identifiable, Sendable {
     }
 
     public func encoded() throws -> Data {
-        let envelope = Envelope(format: "travel-view-trip", version: 1, id: id, exportedAt: exportedAt, trip: trip, items: items)
+        // Keep files without transport readable by earlier app builds.
+        let envelope = Envelope(format: "travel-view-trip", version: items.contains { $0.kind == .transport } ? 2 : 1,
+                                id: id, exportedAt: exportedAt, trip: trip, items: items)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -43,10 +45,16 @@ public struct SharedTripPackage: Identifiable, Sendable {
         guard data.count <= maximumBytes else { throw TripError("Choose a trip file smaller than 10 MB.") }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+        let header: TripFileHeader
+        do { header = try decoder.decode(TripFileHeader.self, from: data) }
+        catch { throw TripError("This file could not be read as a shared Travel View trip.") }
+        guard header.format == "travel-view-trip", (1...2).contains(header.version) else {
+            throw TripError("This trip file needs a different version of Travel View.")
+        }
         let envelope: Envelope
         do { envelope = try decoder.decode(Envelope.self, from: data) }
         catch { throw TripError("This file could not be read as a shared Travel View trip.") }
-        guard envelope.format == "travel-view-trip", envelope.version == 1 else {
+        guard envelope.version >= 2 || !envelope.items.contains(where: { $0.kind == .transport }) else {
             throw TripError("This trip file needs a different version of Travel View.")
         }
         guard let id = UUID(uuidString: envelope.id), envelope.exportedAt.timeIntervalSince1970.isFinite else {

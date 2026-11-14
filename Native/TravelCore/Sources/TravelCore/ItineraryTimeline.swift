@@ -1,6 +1,6 @@
 import Foundation
 
-/// Calendar entries are projections of an item. Both flight ends still edit the same saved record.
+/// Calendar entries are projections of an item. Both ends of a journey still edit the same saved record.
 public struct ItineraryEvent: Identifiable, Equatable, Sendable {
     public enum Role: String, Sendable {
         case plan, departure, arrival, checkIn, checkOut, activity, activityEnd
@@ -85,6 +85,10 @@ public enum ItineraryTimeline {
         case .lodging:
             var entries = [event(.checkIn, item.start, item.startTime)]
             if let end = item.end { entries.append(event(.checkOut, end, item.endTime)) }
+            return entries
+        case .transport:
+            var entries = [event(.departure, item.start, item.startTime)]
+            if let end = item.end { entries.append(event(.arrival, end, item.endTime)) }
             return entries
         case .activity:
             var entries = [event(.activity, item.start, item.startTime)]

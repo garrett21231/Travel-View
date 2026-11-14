@@ -36,7 +36,11 @@ public enum ItineraryText {
                     lines.append("  Route: \(airport(flight.departureAirport)) → \(airport(flight.arrivalAirport))")
                 }
                 if !item.location.isEmpty { lines.append("  Location: \(item.location)") }
-                // Both ends of a flight/stay remain visible. Longer personal details appear once per item.
+                if let transport = item.transport {
+                    lines.append("  Transport: \(transport.mode.title)\(transport.operatorName.isEmpty ? "" : " · " + transport.operatorName)")
+                    lines.append("  Route: \(transport.routeText)")
+                }
+                // Both ends of a journey/stay remain visible. Longer personal details appear once per item.
                 if detailedIDs.insert(item.id).inserted {
                     if options.includeReferences, !item.confirmationReference.isEmpty {
                         lines.append("  \(item.kind == .flight ? "Booking reference" : "Confirmation reference"): \(item.confirmationReference)")

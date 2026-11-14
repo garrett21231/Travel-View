@@ -32,6 +32,7 @@ struct ItineraryEditor: View {
         var start: Date
         var end: Date
         var flight: FlightDetails
+        var transport: TransportDetails
         var hasDepartureTime: Bool
         var hasArrivalTime: Bool
         var departureTime: Date
@@ -46,7 +47,7 @@ struct ItineraryEditor: View {
             reference = item?.confirmationReference ?? ""
             hasDates = item?.start != nil
             hasArrivalDate = item == nil || item?.end != nil
-            hasEndDate = item.map { $0.end != nil } ?? (kind == .lodging)
+            hasEndDate = item.map { $0.end != nil } ?? (kind == .lodging || kind == .transport)
             hasStartTime = item?.startTime != nil
             hasEndTime = item?.endTime != nil
             startClock = (item?.startTime ?? LocalClock(rawValue: "09:00")!).pickerDate
@@ -54,6 +55,7 @@ struct ItineraryEditor: View {
             start = (item?.start ?? trip.start ?? TravelDay()).date()
             end = (item?.end ?? item?.start ?? trip.start ?? TravelDay()).date()
             flight = item?.flight ?? FlightDetails()
+            transport = item?.transport ?? TransportDetails()
             hasDepartureTime = flight.departureLocal != nil
             hasArrivalTime = flight.arrivalLocal != nil
             departureTime = flight.departureLocal?.pickerDate ?? LocalMoment(rawValue: "2026-01-01T12:00")!.pickerDate
@@ -83,7 +85,8 @@ struct ItineraryEditor: View {
                                   location: location, notes: notes, flight: kind == .flight ? details : nil,
                                   startTime: kind != .flight && hasDates && hasStartTime ? LocalClock(pickerDate: startClock) : nil,
                                   endTime: kind != .flight && hasDates && hasEndDate && hasEndTime ? LocalClock(pickerDate: endClock) : nil,
-                                  bookingState: bookingState, reservationReference: kind == .flight ? "" : reference)
+                                  bookingState: bookingState, reservationReference: kind == .flight ? "" : reference,
+                                  transport: kind == .transport ? transport : nil)
         }
     }
 
@@ -106,7 +109,9 @@ struct ItineraryEditor: View {
                     }
                     TextField("Title", text: $draft.title).focused($focused)
                         .accessibilityIdentifier("itinerary-title")
-                    TextField("Location or address (optional)", text: $draft.location).focused($focused)
+                    if draft.kind != .transport {
+                        TextField("Location or address (optional)", text: $draft.location).focused($focused)
+                    }
                 }
                 Section {
                     Picker("Booking state", selection: $draft.bookingState) {
@@ -125,28 +130,29 @@ struct ItineraryEditor: View {
                     Text("Choose the booking state yourself. A reference or a flight lookup does not mark a plan as booked.")
                 }
                 if draft.kind == .flight { flightFields }
+                if draft.kind == .transport { transportFields }
                 Section {
                     Toggle("Add dates", isOn: $draft.hasDates)
                     if draft.hasDates {
-                        DatePicker(draft.kind == .lodging ? "Check-in" : draft.kind == .flight ? "Departure day" : "Start",
+                        DatePicker(draft.kind == .lodging ? "Check-in" : draft.kind == .flight || draft.kind == .transport ? "Departure day" : "Start",
                                    selection: $draft.start, displayedComponents: .date)
                         if draft.kind != .flight {
-                            Toggle(draft.kind == .lodging ? "Add check-in time" : "Add start time", isOn: $draft.hasStartTime)
+                            Toggle(draft.kind == .lodging ? "Add check-in time" : draft.kind == .transport ? "Add departure time" : "Add start time", isOn: $draft.hasStartTime)
                                 .accessibilityIdentifier("add-start-time")
                             if draft.hasStartTime {
-                                clockPicker(draft.kind == .lodging ? "Check-in time" : "Start time", selection: $draft.startClock)
+                                clockPicker(draft.kind == .lodging ? "Check-in time" : draft.kind == .transport ? "Departure time" : "Start time", selection: $draft.startClock)
                             }
-                            Toggle(draft.kind == .lodging ? "Add check-out date" : "Add end date", isOn: $draft.hasEndDate)
+                            Toggle(draft.kind == .lodging ? "Add check-out date" : draft.kind == .transport ? "Add arrival date" : "Add end date", isOn: $draft.hasEndDate)
                                 .accessibilityIdentifier("add-end-date")
                         }
                         if draft.kind == .flight { Toggle("Add arrival date", isOn: $draft.hasArrivalDate) }
                         if draft.kind == .flight ? draft.hasArrivalDate : draft.hasEndDate {
-                            DatePicker(draft.kind == .lodging ? "Check-out" : draft.kind == .flight ? "Arrival day" : "End",
+                            DatePicker(draft.kind == .lodging ? "Check-out" : draft.kind == .flight || draft.kind == .transport ? "Arrival day" : "End",
                                        selection: $draft.end, displayedComponents: .date)
                             if draft.kind != .flight {
-                                Toggle(draft.kind == .lodging ? "Add check-out time" : "Add end time", isOn: $draft.hasEndTime)
+                                Toggle(draft.kind == .lodging ? "Add check-out time" : draft.kind == .transport ? "Add arrival time" : "Add end time", isOn: $draft.hasEndTime)
                                 if draft.hasEndTime {
-                                    clockPicker(draft.kind == .lodging ? "Check-out time" : "End time", selection: $draft.endClock)
+                                    clockPicker(draft.kind == .lodging ? "Check-out time" : draft.kind == .transport ? "Arrival time" : "End time", selection: $draft.endClock)
                                 }
                             }
                         }
@@ -166,7 +172,7 @@ struct ItineraryEditor: View {
                         }
                     }
                 } header: { Text("Schedule") } footer: {
-                    Text(draft.kind == .flight ? "Use each airport’s local date and time. Arrival can be on a different day." : "Use local dates and times at the location. You can leave dates or times open while planning.")
+                    Text(draft.kind == .flight ? "Use each airport’s local date and time. Arrival can be on a different day." : draft.kind == .transport ? "Use the local date and time at each stop. Times are not converted between time zones. Leave dates or times open while planning." : "Use local dates and times at the location. You can leave dates or times open while planning.")
                 }
                 Section("Notes") {
                     TextField("Details to remember", text: $draft.notes, axis: .vertical)
@@ -208,7 +214,7 @@ struct ItineraryEditor: View {
                 #endif
             }
             .onChange(of: draft.start) { _, start in
-                if draft.kind != .flight && draft.end < start { draft.end = start }
+                if draft.kind != .flight && draft.kind != .transport && draft.end < start { draft.end = start }
             }
         }
         .sheet(isPresented: $lookup) {
@@ -227,6 +233,28 @@ struct ItineraryEditor: View {
         #if os(macOS)
         .frame(minWidth: 490, idealWidth: 560, minHeight: 600, idealHeight: 740)
         #endif
+    }
+
+    private var transportFields: some View {
+        Section("Transport") {
+            Picker("Travel by", selection: $draft.transport.mode) {
+                ForEach(TransportMode.allCases) { mode in
+                    Label(mode.title, systemImage: mode.symbol).tag(mode)
+                }
+            }.accessibilityIdentifier("transport-mode")
+            transportField("Company", prompt: "Company (optional)", text: $draft.transport.operatorName, id: "transport-company")
+            transportField("Departure", prompt: "Station or location (optional)", text: $draft.transport.departure, id: "transport-departure")
+            transportField("Arrival", prompt: "Station or location (optional)", text: $draft.transport.arrival, id: "transport-arrival")
+        }
+    }
+
+    /// Keep the stop labels visible after text replaces the placeholder, especially on iPhone.
+    private func transportField(_ title: String, prompt: String, text: Binding<String>, id: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(TravelTheme.secondary)
+            TextField(prompt, text: text).labelsHidden().focused($focused)
+                .accessibilityLabel(title).accessibilityIdentifier(id)
+        }
     }
 
     private var flightFields: some View {

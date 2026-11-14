@@ -1,5 +1,11 @@
 import Foundation
 
+/// Read the version before decoding records that a newer app may have extended.
+struct TripFileHeader: Decodable {
+    let format: String
+    let version: Int
+}
+
 /// A portable snapshot. Its version can evolve independently of the SQLite schema.
 public struct TripArchive: Codable, Sendable {
     public static let maximumBytes = 10 * 1024 * 1024
@@ -10,7 +16,8 @@ public struct TripArchive: Codable, Sendable {
     let items: [ItineraryItem]
 
     public static func encode(_ trips: [Trip], items: [ItineraryItem] = []) throws -> Data {
-        let archive = Self(format: "travel-view-native", version: 4, exportedAt: .now, trips: trips, items: items)
+        let archive = Self(format: "travel-view-native", version: items.contains { $0.kind == .transport } ? 5 : 4,
+                           exportedAt: .now, trips: trips, items: items)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -41,10 +48,16 @@ public struct TripArchive: Codable, Sendable {
         guard data.count <= maximumBytes else { throw TripError("Choose a backup smaller than 10 MB.") }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+        let header: TripFileHeader
+        do { header = try decoder.decode(TripFileHeader.self, from: data) }
+        catch { throw TripError("This file could not be read as a native Travel View backup.") }
+        guard header.format == "travel-view-native", (1...5).contains(header.version) else {
+            throw TripError("This backup format needs a different version of Travel View.")
+        }
         let archive: Self
         do { archive = try decoder.decode(Self.self, from: data) }
         catch { throw TripError("This file could not be read as a native Travel View backup.") }
-        guard archive.format == "travel-view-native", (1...4).contains(archive.version) else {
+        guard archive.version >= 5 || !archive.items.contains(where: { $0.kind == .transport }) else {
             throw TripError("This backup format needs a different version of Travel View.")
         }
         return try validated(trips: archive.trips, items: archive.items)

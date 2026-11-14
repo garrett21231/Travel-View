@@ -28,7 +28,8 @@ struct ReservationTests {
         for kind in ItineraryKind.allCases {
             let input = ItineraryInput(kind: kind, title: kind.title, location: "London", notes: "Keep these notes",
                                        flight: kind == .flight ? FlightDetails(number: "BA178", bookingReference: "FLIGHT") : nil,
-                                       bookingState: .booked, reservationReference: kind == .flight ? "" : "REF-42")
+                                       bookingState: .booked, reservationReference: kind == .flight ? "" : "REF-42",
+                                       transport: kind == .transport ? TransportDetails() : nil)
             let saved = try await repository.saveItem(input, id: UUID().uuidString, tripID: trip.id)
             let reopened = try TripRepository(databaseURL: url)
             let loaded = try #require(try await reopened.loadSnapshot().items.first { $0.id == saved.id })

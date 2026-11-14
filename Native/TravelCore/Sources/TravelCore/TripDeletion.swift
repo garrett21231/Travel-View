@@ -29,7 +29,8 @@ extension TripRepository {
             let items = try ItineraryItem.filter(Column("tripID") == trip.id).fetchAll(db)
             let rows = try Row.fetchAll(db, sql: "SELECT packageID, tripID FROM sharedTripImports WHERE tripID = ?", arguments: [trip.id])
             let receipts = Dictionary(uniqueKeysWithValues: rows.map { ($0["packageID"] as String, $0["tripID"] as String) })
-            let contents = DeletedTripContents(version: 1, trip: trip, items: items, sharedTripImports: receipts)
+            let contents = DeletedTripContents(version: items.contains { $0.kind == .transport } ? 2 : 1,
+                                               trip: trip, items: items, sharedTripImports: receipts)
             // This private database payload has no external-file size limit, so large saved trips remain deletable.
             let data = try JSONEncoder().encode(contents)
             let now = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970.rounded(.down))
@@ -68,7 +69,7 @@ extension TripRepository {
             let contents: DeletedTripContents
             do { contents = try JSONDecoder().decode(DeletedTripContents.self, from: row["contents"] as Data) }
             catch { throw TripError("The deleted trip couldn’t be read. It has been kept in Recently deleted.") }
-            guard contents.version == 1, contents.trip.id == row["tripID"] as String else {
+            guard (1...2).contains(contents.version), contents.trip.id == row["tripID"] as String else {
                 throw TripError("This deleted trip needs a different version of Travel View.")
             }
             guard contents.items.allSatisfy({ $0.tripID == contents.trip.id }),

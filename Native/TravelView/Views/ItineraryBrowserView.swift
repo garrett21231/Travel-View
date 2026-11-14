@@ -31,7 +31,7 @@ struct ItineraryBrowserView: View {
                         ContentUnavailableView {
                             Label("No plans yet", systemImage: "calendar.badge.plus")
                         } description: {
-                            Text("Add flights, stays, or activities from Overview.")
+                            Text("Add flights, transport, stays, or activities from Overview.")
                         } actions: { Button("Back to Overview") { dismiss() } }
                     } else {
                         Text("\(results.count) of \(items.count) \(items.count == 1 ? "plan" : "plans")")
@@ -112,6 +112,7 @@ struct ItineraryBrowserView: View {
         Picker("Type", selection: $query.kind) {
             Text("All types").tag(nil as ItineraryKind?)
             Text("Flights").tag(ItineraryKind.flight as ItineraryKind?)
+            Text("Transport").tag(ItineraryKind.transport as ItineraryKind?)
             Text("Stays").tag(ItineraryKind.lodging as ItineraryKind?)
             Text("Activities").tag(ItineraryKind.activity as ItineraryKind?)
         }
@@ -133,7 +134,7 @@ private struct ItinerarySearchRow: View {
     let item: ItineraryItem
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.kind.symbol).foregroundStyle(TravelTheme.accent)
+            Image(systemName: item.symbol).foregroundStyle(TravelTheme.accent)
                 .frame(width: 22).padding(.top, 3).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 9) {
                 Text(item.title).font(.headline).foregroundStyle(TravelTheme.ink)
@@ -142,6 +143,9 @@ private struct ItinerarySearchRow: View {
                 BookingStateBadge(state: item.bookingState)
                 if let flight = item.flight {
                     Text("\(flight.number) · \(flight.departureAirport.isEmpty ? "TBD" : flight.departureAirport) → \(flight.arrivalAirport.isEmpty ? "TBD" : flight.arrivalAirport)")
+                        .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                } else if let transport = item.transport {
+                    Text("\(transport.mode.title) · \(transport.routeText)")
                         .font(.subheadline).foregroundStyle(TravelTheme.secondary)
                 } else if !item.location.isEmpty {
                     Text(item.location).font(.subheadline).foregroundStyle(TravelTheme.secondary)

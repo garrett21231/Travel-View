@@ -13,7 +13,7 @@ struct PlanningSummaryView: View {
             Text("\(summary.total) \(summary.total == 1 ? "plan" : "plans")")
                 .font(.title2.weight(.semibold))
                 .accessibilityIdentifier("planning-total")
-            Text("\(summary.flights) \(summary.flights == 1 ? "flight" : "flights") · \(summary.stays) \(summary.stays == 1 ? "stay" : "stays") · \(summary.activities) \(summary.activities == 1 ? "activity" : "activities")")
+            Text("\(summary.flights) \(summary.flights == 1 ? "flight" : "flights") · \(summary.transport) transport · \(summary.stays) \(summary.stays == 1 ? "stay" : "stays") · \(summary.activities) \(summary.activities == 1 ? "activity" : "activities")")
                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading),
                                      count: dynamicTypeSize.isAccessibilitySize ? 1 : 3), alignment: .leading, spacing: 12) {

@@ -30,13 +30,14 @@ struct ItineraryDetailView: View {
                                 .accessibilityAddTraits(.isHeader)
                                 .accessibilityIdentifier("itinerary-detail-title")
                             HStack(spacing: 12) {
-                                Label(item.kind.title, systemImage: item.kind.symbol).foregroundStyle(TravelTheme.secondary)
+                                Label(item.transport?.mode.title ?? item.kind.title, systemImage: item.symbol).foregroundStyle(TravelTheme.secondary)
                                 BookingStateBadge(state: item.bookingState)
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading)
                         reservation(item)
                         schedule(item)
-                        location(item)
+                        if let transport = item.transport { transportLocations(transport) }
+                        else { location(item) }
                         VStack(alignment: .leading, spacing: 10) {
                             heading("Notes")
                             Text(item.notes.isEmpty ? "No notes added." : item.notes)
@@ -127,12 +128,37 @@ struct ItineraryDetailView: View {
                 scheduleField("Arrival · \(airport(flight.arrivalAirport))", day: item.end,
                               time: flight.arrivalLocal.flatMap { LocalClock(rawValue: $0.clock) })
                 Text("Each time is local to its airport.").font(.caption).foregroundStyle(TravelTheme.secondary)
+            } else if let transport = item.transport {
+                Text(transport.mode.title + (transport.operatorName.isEmpty ? "" : " · " + transport.operatorName))
+                scheduleField("Departure", day: item.start, time: item.startTime)
+                scheduleField("Arrival", day: item.end, time: item.endTime)
+                Text("Each time is local to its stop. Times are not converted between time zones.")
+                    .font(.caption).foregroundStyle(TravelTheme.secondary)
             } else {
                 scheduleField(item.kind == .lodging ? "Check-in" : "Start", day: item.start, time: item.startTime)
                 scheduleField(item.kind == .lodging ? "Check-out" : "End", day: item.end, time: item.endTime)
                 Text("Times are local to this location.").font(.caption).foregroundStyle(TravelTheme.secondary)
             }
         }.tripPanel()
+    }
+
+    private func transportLocations(_ transport: TransportDetails) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            heading("Route")
+            transportStop("Departure", location: transport.departure)
+            transportStop("Arrival", location: transport.arrival)
+        }.tripPanel()
+    }
+
+    private func transportStop(_ title: String, location: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.caption).foregroundStyle(TravelTheme.secondary)
+            Text(location.isEmpty ? "Location to be decided" : location).textSelection(.enabled)
+            if let url = LocationLink.mapsSearch(for: location) {
+                Link(destination: url) { Label("Open \(title.lowercased()) in Maps", systemImage: "map") }
+                    .buttonStyle(.bordered)
+            }
+        }
     }
 
     private func location(_ item: ItineraryItem) -> some View {

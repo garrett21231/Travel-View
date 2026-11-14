@@ -24,7 +24,7 @@ struct SharedTripTests {
     @Test func invalidFormatsFieldsRelationshipsAndOversizedFilesAreRejected() throws {
         let package = try package()
         let data = try package.encoded()
-        for (field, value) in [("format", "unknown" as Any), ("version", 2), ("id", "bad-id"), ("exportedAt", NSNull())] {
+        for (field, value) in [("format", "unknown" as Any), ("version", 3), ("id", "bad-id"), ("exportedAt", NSNull())] {
             var json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
             json[field] = value
             #expect(throws: TripError.self) { try SharedTripPackage.decode(JSONSerialization.data(withJSONObject: json)) }
@@ -151,7 +151,20 @@ struct SharedTripTests {
                     bookingState TEXT NOT NULL DEFAULT 'planned', reservationReference TEXT NOT NULL DEFAULT '');
                 """)
             try package.trip.insert(db)
-            for item in package.items { try item.insert(db) }
+            for item in package.items {
+                // Write only the columns that existed in this fixture's schema.
+                let flight = try item.flight.map {
+                    String(decoding: try ItineraryItem.databaseJSONEncoder(for: "flight").encode($0), as: UTF8.self)
+                }
+                try db.execute(sql: """
+                    INSERT INTO itineraryItems
+                        (id, tripID, kind, title, start, end, location, notes, flight, createdAt,
+                         startTime, endTime, bookingState, reservationReference)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, arguments: [item.id, item.tripID, item.kind.rawValue, item.title, item.start?.rawValue,
+                                      item.end?.rawValue, item.location, item.notes, flight, item.createdAt,
+                                      item.startTime?.rawValue, item.endTime?.rawValue, item.bookingState.rawValue, item.reservationReference])
+            }
         }
         let repository = try TripRepository(databaseURL: url)
         let snapshot = try await repository.loadSnapshot()

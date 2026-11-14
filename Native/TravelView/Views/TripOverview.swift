@@ -118,7 +118,7 @@ struct TripOverview: View {
                 VStack(alignment: .leading, spacing: 12) { itineraryHeading; addMenu }
             }
             if days.isEmpty {
-                Text("Bring your plans together with flights, places to stay, and things to do.")
+                Text("Bring your plans together with flights, transport, places to stay, and things to do.")
                     .foregroundStyle(TravelTheme.secondary)
                     .tripPanel()
             } else {

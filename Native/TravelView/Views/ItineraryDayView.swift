@@ -49,7 +49,7 @@ private struct ItineraryEventRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Label(event.title, systemImage: event.item.kind.symbol)
+                Label(event.title, systemImage: event.item.symbol)
                     .font(.caption.weight(.semibold)).foregroundStyle(TravelTheme.accent)
                 Spacer(minLength: 8)
                 Menu {
@@ -74,6 +74,9 @@ private struct ItineraryEventRow: View {
                         BookingStateBadge(state: event.item.bookingState)
                         if let flight = event.item.flight {
                             Text("\(flight.number) · \(airport(flight.departureAirport)) → \(airport(flight.arrivalAirport))")
+                                .font(.subheadline).foregroundStyle(TravelTheme.secondary)
+                        } else if let transport = event.item.transport {
+                            Text("\(transport.mode.title) · \(transport.routeText)")
                                 .font(.subheadline).foregroundStyle(TravelTheme.secondary)
                         } else if !event.item.location.isEmpty {
                             Label(event.item.location, systemImage: "mappin.and.ellipse")
@@ -103,6 +106,8 @@ private struct ItineraryEventRow: View {
         var parts = [event.item.title, event.timeText, "Booking state: \(event.item.bookingState.title)"]
         if let flight = event.item.flight {
             parts.append("\(flight.number), \(airport(flight.departureAirport)) to \(airport(flight.arrivalAirport))")
+        } else if let transport = event.item.transport {
+            parts.append("\(transport.mode.title), \(transport.routeText)")
         } else if !event.item.location.isEmpty { parts.append(event.item.location) }
         return parts.joined(separator: ". ")
     }
