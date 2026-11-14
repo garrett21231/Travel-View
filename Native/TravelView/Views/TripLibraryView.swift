@@ -82,6 +82,12 @@ struct TripLibraryView: View {
             if let trip = selectedTrip {
                 NavigationStack {
                     TripOverview(trip: trip, store: store) { editor = EditorSelection(trip: trip) }
+                        .navigationDestination(for: ItinerarySelection.self) { selection in
+                            ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
+                        }
+                        .navigationDestination(for: ItineraryBrowserSelection.self) { selection in
+                            ItineraryBrowserView(store: store, selection: selection)
+                        }
                 }
                 .id(trip.id)
             } else {

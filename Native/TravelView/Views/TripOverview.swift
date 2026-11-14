@@ -20,7 +20,8 @@ struct TripOverview: View {
     }
 
     var body: some View {
-        let days = ItineraryTimeline.days(for: store.items(for: trip.id))
+        let items = store.items(for: trip.id)
+        let days = ItineraryTimeline.days(for: items)
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -43,6 +44,7 @@ struct TripOverview: View {
                     }
                     .tripPanel()
 
+                    PlanningSummaryView(tripID: trip.id, summary: ItinerarySummary(items: items))
                     if !days.isEmpty { comingUp(days: days, proxy: proxy) }
                     itineraryPanel(days: days)
 
@@ -61,9 +63,6 @@ struct TripOverview: View {
         }
         .background(TravelTheme.background)
         .navigationTitle("Overview")
-        .navigationDestination(for: ItinerarySelection.self) { selection in
-            ItineraryDetailView(store: store, tripID: selection.tripID, itemID: selection.id)
-        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
