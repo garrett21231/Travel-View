@@ -8,6 +8,7 @@ struct TripOverview: View {
     @State private var editor: ItemSelection?
     @State private var removing: ItineraryItem?
     @State private var checkingFlight: ItineraryItem?
+    @State private var sharing = false
     @State private var error: String?
     @State private var today = TravelDay()
     @Environment(\.scenePhase) private var scenePhase
@@ -67,6 +68,8 @@ struct TripOverview: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            Button("Share itinerary", systemImage: "square.and.arrow.up") { sharing = true }
+                .accessibilityIdentifier("preview-itinerary-share")
             Button("Edit trip", systemImage: "pencil", action: onEdit)
                 .accessibilityIdentifier("edit-trip")
         }
@@ -76,6 +79,7 @@ struct TripOverview: View {
         .sheet(item: $checkingFlight) { item in
             FlightUpdateView(store: store, item: item)
         }
+        .sheet(isPresented: $sharing) { ItineraryShareView(store: store, tripID: trip.id) }
         .confirmationDialog("Remove this itinerary item?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible) {
             Button("Remove item", role: .destructive) {
                 guard let item = removing else { return }
