@@ -161,6 +161,15 @@ final class TripStore {
         catch { throw TripError("The trip couldn’t be restored. It is still in Recently deleted. Try again.") }
     }
 
+    func permanentlyDeleteTrip(_ deleted: DeletedTrip) async throws {
+        guard canChangeTrips, let repository else { throw TripError("Please wait for your trips to finish loading.") }
+        isWorking = true
+        defer { isWorking = false }
+        do { apply(try await repository.permanentlyDeleteTrip(id: deleted.id)) }
+        catch let error as TripError { throw error }
+        catch { throw TripError("The trip couldn’t be permanently deleted. It is still in Recently deleted. Try again.") }
+    }
+
     private func apply(_ snapshot: TripRepository.Snapshot) {
         trips = snapshot.trips
         itinerary = snapshot.items

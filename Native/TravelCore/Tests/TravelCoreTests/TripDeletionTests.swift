@@ -177,6 +177,102 @@ struct TripDeletionTests {
         #expect(try await upgraded.deleteTrip(id: original.trips[0].id).deletedTrips.count == 1)
     }
 
+    @Test func permanentDeletionRemovesOnlyTheSelectedRecoveryEntryAndKeepsAnActiveBackupCopy() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("trips.sqlite")
+        let repository = try TripRepository(databaseURL: url)
+        let original = try await repository.importSharedTrip(package())
+        let deleted = try await repository.deleteTrip(id: original.tripID)
+        let selected = try #require(deleted.deletedTrips.first)
+        let other = try await repository.save(TripInput(name: "Keep this recovery entry"), id: UUID().uuidString)
+        _ = try await repository.deleteTrip(id: other.id)
+        _ = try await repository.restore(TripArchive.encode(original.snapshot.trips, items: original.snapshot.items))
+        let before = try await repository.loadSnapshot()
+        let result = try await repository.permanentlyDeleteTrip(id: selected.id.lowercased())
+        #expect(result.trips == before.trips && result.items == before.items)
+        #expect(result.sharedTripImports == before.sharedTripImports)
+        #expect(result.deletedTrips == before.deletedTrips.filter { $0.id != selected.id })
+        let reopened = try TripRepository(databaseURL: url)
+        let persisted = try await reopened.loadSnapshot()
+        #expect(persisted.deletedTrips == result.deletedTrips)
+        await #expect(throws: TripError.self) { try await reopened.restoreDeletedTrip(id: selected.id) }
+    }
+
+    @Test func failedPermanentDeletionPreservesRecoveryAndCanRetry() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("trips.sqlite")
+        let repository = try TripRepository(databaseURL: url)
+        let original = try await repository.importSharedTrip(package())
+        let deleted = try await repository.deleteTrip(id: original.tripID)
+        let selected = try #require(deleted.deletedTrips.first)
+        let fixture = try DatabaseQueue(path: url.path)
+        try await fixture.write { db in
+            try db.execute(sql: "CREATE TRIGGER reject_permanent_delete BEFORE DELETE ON deletedTrips BEGIN SELECT RAISE(ABORT, 'Test failure'); END")
+        }
+        await #expect(throws: (any Error).self) { try await repository.permanentlyDeleteTrip(id: selected.id) }
+        let failed = try await repository.loadSnapshot()
+        #expect(failed.deletedTrips == deleted.deletedTrips && failed.trips.isEmpty && failed.items.isEmpty)
+        try await fixture.write { db in try db.execute(sql: "DROP TRIGGER reject_permanent_delete") }
+        let retry = try await repository.permanentlyDeleteTrip(id: selected.id)
+        #expect(retry.deletedTrips.isEmpty && retry.trips.isEmpty && retry.items.isEmpty && retry.sharedTripImports.isEmpty)
+    }
+
+    @Test func permanentDeletionRejectsInvalidMissingAndRestoredEntryIDsWithoutTouchingTheTrip() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = try TripRepository(databaseURL: directory.appendingPathComponent("trips.sqlite"))
+        let original = try await repository.importSharedTrip(package())
+        let deleted = try await repository.deleteTrip(id: original.tripID)
+        let selected = try #require(deleted.deletedTrips.first)
+        await #expect(throws: TripError.self) { try await repository.permanentlyDeleteTrip(id: "bad-id") }
+        await #expect(throws: TripError.self) { try await repository.permanentlyDeleteTrip(id: UUID().uuidString) }
+        #expect(try await repository.loadSnapshot().deletedTrips == deleted.deletedTrips)
+        let restored = try await repository.restoreDeletedTrip(id: selected.id)
+        await #expect(throws: TripError.self) { try await repository.permanentlyDeleteTrip(id: selected.id) }
+        let result = try await repository.loadSnapshot()
+        #expect(result.trips == restored.snapshot.trips && result.items == restored.snapshot.items)
+        #expect(result.sharedTripImports == restored.snapshot.sharedTripImports && result.deletedTrips.isEmpty)
+    }
+
+    @Test func anUnreadableRecoveryPayloadCanStillBePermanentlyRemoved() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("trips.sqlite")
+        let repository = try TripRepository(databaseURL: url)
+        let original = try await repository.importSharedTrip(package())
+        let deleted = try await repository.deleteTrip(id: original.tripID)
+        let selected = try #require(deleted.deletedTrips.first)
+        let fixture = try DatabaseQueue(path: url.path)
+        try await fixture.write { db in
+            try db.execute(sql: "UPDATE deletedTrips SET contents = ? WHERE id = ?", arguments: [Data("broken".utf8), selected.id])
+        }
+        await #expect(throws: TripError.self) { try await repository.restoreDeletedTrip(id: selected.id) }
+        #expect(try await repository.permanentlyDeleteTrip(id: selected.id).deletedTrips.isEmpty)
+    }
+
+    @Test func concurrentRestoreAndPermanentDeleteHaveOneCompleteOutcome() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = try TripRepository(databaseURL: directory.appendingPathComponent("trips.sqlite"))
+        let original = try await repository.importSharedTrip(package())
+        let deleted = try await repository.deleteTrip(id: original.tripID)
+        let selected = try #require(deleted.deletedTrips.first)
+        async let restoration = try? repository.restoreDeletedTrip(id: selected.id)
+        async let removal = try? repository.permanentlyDeleteTrip(id: selected.id)
+        let (restored, removed) = await (restoration, removal)
+        #expect((restored == nil) != (removed == nil))
+        let final = try await repository.loadSnapshot()
+        #expect(final.deletedTrips.isEmpty)
+        if restored != nil {
+            #expect(final.trips == original.snapshot.trips && final.items == original.snapshot.items)
+            #expect(final.sharedTripImports == original.snapshot.sharedTripImports)
+        } else {
+            #expect(final.trips.isEmpty && final.items.isEmpty && final.sharedTripImports.isEmpty)
+        }
+    }
+
     private func package() throws -> SharedTripPackage {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let trip = Trip(id: UUID().uuidString,

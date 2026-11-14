@@ -45,6 +45,19 @@ extension TripRepository {
         public let snapshot: Snapshot
     }
 
+    /// Remove only the selected recovery entry, including its complete saved payload.
+    /// Active trips and newer copies are independent, even if their original identity matches.
+    public func permanentlyDeleteTrip(id: String) async throws -> Snapshot {
+        guard let identifier = UUID(uuidString: id) else { throw TripError("The deleted trip identifier is invalid.") }
+        return try await database.write { db in
+            guard try Row.fetchOne(db, sql: "SELECT id FROM deletedTrips WHERE id = ?", arguments: [identifier.uuidString]) != nil else {
+                throw TripError("This trip has already been restored or removed from Recently deleted.")
+            }
+            try db.execute(sql: "DELETE FROM deletedTrips WHERE id = ?", arguments: [identifier.uuidString])
+            return try Self.snapshot(in: db)
+        }
+    }
+
     /// Restore original identities without overwriting any trip or item added since deletion.
     public func restoreDeletedTrip(id: String) async throws -> TripRestoration {
         guard let identifier = UUID(uuidString: id) else { throw TripError("The deleted trip identifier is invalid.") }
