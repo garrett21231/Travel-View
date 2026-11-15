@@ -5,6 +5,9 @@ import TravelCore
 struct TripLibraryView: View {
     let store: TripStore
     @State private var collection = Collection.upcoming
+    @State private var searchText = ""
+    @State private var upcomingSort = TripSortOrder.departure
+    @State private var allSort = TripSortOrder.newest
     @State private var selectedTripID: String?
     @State private var compactColumn = NavigationSplitViewColumn.sidebar
     @State private var editor: EditorSelection?
@@ -35,10 +38,20 @@ struct TripLibraryView: View {
         let trip: Trip?
     }
 
-    private var visibleTrips: [Trip] {
-        collection == .upcoming ? Trip.upcoming(store.trips, on: today) : store.trips.sorted {
-            ($0.createdAt, $0.id) > ($1.createdAt, $1.id)
-        }
+    private var collectionTrips: [Trip] {
+        collection == .upcoming ? Trip.upcoming(store.trips, on: today) : store.trips
+    }
+
+    private var query: TripQuery {
+        TripQuery(text: searchText, sortOrder: collection == .upcoming ? upcomingSort : allSort)
+    }
+
+    private var visibleTrips: [Trip] { query.matching(collectionTrips) }
+
+    private var sortSelection: Binding<TripSortOrder> {
+        Binding(get: { collection == .upcoming ? upcomingSort : allSort }, set: {
+            if collection == .upcoming { upcomingSort = $0 } else { allSort = $0 }
+        })
     }
 
     private var selectedTrip: Trip? { store.trips.first { $0.id == selectedTripID } }
@@ -55,6 +68,18 @@ struct TripLibraryView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
 
+                    if !store.trips.isEmpty, !store.isLoading, store.loadError == nil {
+                        HStack {
+                            Text("Sort").font(.caption).foregroundStyle(TravelTheme.secondary)
+                            Picker("Sort trips", selection: sortSelection) {
+                                ForEach(TripSortOrder.allCases) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.menu).labelsHidden()
+                            .accessibilityIdentifier("trip-sort-order")
+                            Spacer(minLength: 0)
+                        }.padding(.horizontal, 20).padding(.bottom, 8)
+                    }
+
                     if store.isLoading {
                         ProgressView("Loading your trips…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let error = store.loadError {
@@ -66,13 +91,19 @@ struct TripLibraryView: View {
                             Button("Try again") { Task { await store.load() } }
                         }
                     } else if visibleTrips.isEmpty {
-                        emptyState
+                        if query.isSearching, !store.trips.isEmpty { noMatchingTrips }
+                        else { emptyState }
                     } else {
                         tripList
                     }
                 }
                 .background(TravelTheme.background)
                 .navigationTitle(collection == .upcoming ? "Upcoming trips" : "All trips")
+                #if os(iOS)
+                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Trip name or destination")
+                #else
+                .searchable(text: $searchText, placement: .sidebar, prompt: "Trip name or destination")
+                #endif
                 .navigationSplitViewColumnWidth(min: 300, ideal: 350, max: 440)
                 .toolbar {
                     ToolbarItemGroup(placement: .primaryAction) {
@@ -127,6 +158,7 @@ struct TripLibraryView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: pendingPackage?.id)
         .sheet(item: $reviewingPackage) { package in
             SharedTripImportView(store: store, package: package) { id in
+                searchText = ""
                 collection = .all
                 selectedTripID = id
                 compactColumn = .detail
@@ -136,6 +168,8 @@ struct TripLibraryView: View {
         }
         .sheet(item: $editor) { selection in
             TripEditor(store: store, trip: selection.trip) { saved in
+                // A saved trip should be visible even when its new name/destinations no longer match the search.
+                if query.matching([saved]).isEmpty { searchText = "" }
                 if let end = saved.end, end < today { collection = .all }
                 selectedTripID = saved.id
                 compactColumn = .detail
@@ -143,6 +177,7 @@ struct TripLibraryView: View {
         }
         .sheet(isPresented: $showingDeletedTrips) {
             RecentlyDeletedView(store: store) { id in
+                searchText = ""
                 collection = .all
                 selectedTripID = id
                 compactColumn = .detail
@@ -227,8 +262,10 @@ struct TripLibraryView: View {
                     #endif
                 }
             } header: {
-                Text("\(visibleTrips.count) \(visibleTrips.count == 1 ? "trip" : "trips")")
+                Text(query.isSearching ? "\(visibleTrips.count) of \(collectionTrips.count) \(collectionTrips.count == 1 ? "trip" : "trips")" :
+                    "\(visibleTrips.count) \(visibleTrips.count == 1 ? "trip" : "trips")")
                     .foregroundStyle(TravelTheme.secondary)
+                    .accessibilityIdentifier("trip-result-count")
             }
         }
         .scrollContentBackground(.hidden)
@@ -247,12 +284,30 @@ struct TripLibraryView: View {
         .accessibilityIdentifier("delete-trip-\(trip.id)")
     }
 
+    private var noMatchingTrips: some View {
+        ContentUnavailableView {
+            Label("No matching trips", systemImage: "magnifyingglass")
+        } description: {
+            Text("Try another trip name or destination.")
+        } actions: {
+            Button("Clear search") { searchText = "" }
+                .accessibilityIdentifier("clear-trip-search")
+            if collection == .upcoming {
+                Button("Search All trips") { collection = .all }
+                    .accessibilityIdentifier("search-all-trips")
+            }
+        }
+    }
+
     private var emptyState: some View {
         ContentUnavailableView {
             Label(collection == .upcoming ? "Where to next?" : "Your trips, all together", systemImage: "suitcase.rolling")
         } description: {
             Text(collection == .upcoming ? "Your upcoming trips and open plans will appear here." : "Save a trip to start your travel collection.")
         } actions: {
+            if collection == .upcoming, !store.trips.isEmpty {
+                Button("View All trips") { collection = .all }
+            }
             Button("New trip", systemImage: "plus") { editor = EditorSelection(trip: nil) }
                 .buttonStyle(.borderedProminent)
                 .disabled(!store.canChangeTrips)
@@ -298,6 +353,7 @@ struct TripLibraryView: View {
                     return try Data(contentsOf: url)
                 }.value
                 let result = try await store.restore(data)
+                searchText = ""
                 collection = .all
                 notice = "Imported \(result.added) trips, \(result.addedItems) itinerary items and \(result.addedChecklistItems) checklist items. Existing records keep their current details."
             } catch { notice = error.localizedDescription }

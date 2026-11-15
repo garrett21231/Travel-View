@@ -93,14 +93,7 @@ public struct Trip: Identifiable, Codable, Equatable, Sendable, FetchableRecord,
     }
 
     public static func upcoming(_ trips: [Self], on today: TravelDay) -> [Self] {
-        trips.filter { $0.end.map { $0 >= today } ?? true }.sorted {
-            if $0.start != $1.start {
-                guard let left = $0.start else { return false }
-                guard let right = $1.start else { return true }
-                return left < right
-            }
-            return ($0.createdAt, $0.id) < ($1.createdAt, $1.id)
-        }
+        TripSortOrder.departure.ordered(trips.filter { $0.end.map { $0 >= today } ?? true })
     }
 }
 
