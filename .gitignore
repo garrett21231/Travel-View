@@ -12,3 +12,7 @@ node_modules/
 *.sqlite*
 /Vendor/Python.xcframework/
 /Vendor/.python-ios.*/
+*.exe
+*.un~
+*.un
+*~
